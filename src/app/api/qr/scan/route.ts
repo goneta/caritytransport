@@ -1,0 +1,105 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+
+import prisma from '@/lib/prisma'
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { qrData, scheduleId } = await req.json()
+
+    if (!qrData) {
+      return NextResponse.json({ error: 'QR data required' }, { status: 400 })
+    }
+
+    let payload: Record<string, unknown>
+    try {
+      payload = typeof qrData === 'string' ? JSON.parse(qrData) : qrData
+    } catch {
+      return NextResponse.json({ error: 'Invalid QR data format', valid: false }, { status: 400 })
+    }
+
+    if (payload.type !== 'PUPIL') {
+      return NextResponse.json({
+        valid: false,
+        outcome: 'red',
+        message: 'Not a pupil QR code'
+      })
+    }
+
+    const pupilId = payload.pupilId as string
+
+    const pupil = await prisma.pupil.findUnique({
+      where: { id: pupilId },
+      include: {
+        parent: { include: { user: true } },
+        school: true,
+        seatAssignments: {
+          where: scheduleId ? { scheduleId } : {},
+          include: { schedule: true }
+        },
+        bookingItems: {
+          where: {
+            status: 'ACTIVE',
+            ...(scheduleId ? { scheduleId } : {})
+          }
+        }
+      }
+    })
+
+    if (!pupil) {
+      return NextResponse.json({
+        valid: false,
+        outcome: 'red',
+        message: 'Pupil not found'
+      })
+    }
+
+    // Determine if pupil is booked on this schedule
+    const hasBooking = scheduleId
+      ? pupil.bookingItems.some((b: any) => b.scheduleId === scheduleId)
+      : pupil.seatAssignments.length > 0
+
+    const outcome = hasBooking ? 'green' : 'red'
+
+    // Log the QR scan as a trip log
+    if (scheduleId) {
+      await prisma.tripLog.create({
+        data: {
+          scheduleId,
+          pupilId,
+          driverId: (await prisma.driver.findFirst({ where: { userId: session.user.id } }))?.id,
+          status: hasBooking ? 'BOARDED' : 'ABSENT',
+          qrScanned: true,
+          notes: `QR scanned by driver ${session.user.id}`
+        }
+      })
+    }
+
+    return NextResponse.json({
+      valid: true,
+      outcome,
+      message: hasBooking
+        ? `✓ ${pupil.fullName} is booked on this route`
+        : `✗ ${pupil.fullName} does NOT have an active booking`,
+      pupil: {
+        id: pupil.id,
+        fullName: pupil.fullName,
+        yearLevel: pupil.yearLevel,
+        school: pupil.school?.name,
+        specialRequirements: pupil.specialRequirements,
+        parentName: pupil.parent.user.name,
+        parentPhone: pupil.parent.user.phone,
+        parentEmail: pupil.parent.user.email,
+        pupilPhone: pupil.phone
+      }
+    })
+  } catch (error) {
+    console.error('QR scan error:', error)
+    return NextResponse.json({ error: 'Failed to process QR scan' }, { status: 500 })
+  }
+}

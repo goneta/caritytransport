@@ -1,0 +1,524 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String?
+  phone             String?
+  address           String?
+  dateOfBirth       DateTime?
+  image             String?
+  role              String    @default("PARENT") // SUPER_ADMIN, ADMIN, SCHEDULER, OPERATIONS, DRIVER, PARENT, PUPIL
+  status            String    @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING
+  notifySMS         Boolean   @default(true)
+  notifyEmail       Boolean   @default(true)
+  notifyPush        Boolean   @default(true)
+  platformId        String?   @unique // Human-readable ID e.g. USR-00001
+  qrCodeData        String?   // Signed QR token (JSON encoded)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  sessions          Session[]
+  parent            Parent?
+  driver            Driver?
+  pupilAccount      PupilAccount?
+  auditLogs         AuditLog[]
+  chatMessages      ChatMessage[]
+  sentNotifications Notification[] @relation("SentNotifications")
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
+  bookings          Booking[]
+  basketItems       BasketItem[]
+  supportTickets    SupportTicket[]
+  ticketReplies     TicketReply[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Parent {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pupils      Pupil[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model School {
+  id              String    @id @default(cuid())
+  name            String
+  address         String
+  postcode        String?
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+  startTime       String?
+  endTime         String?
+  termDates       String?
+  status          String    @default("ACTIVE")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  pupils          Pupil[]
+  schedules       TransportSchedule[]
+  holidayPeriods  HolidayPeriod[]
+}
+
+model Pupil {
+  id                  String    @id @default(cuid())
+  fullName            String
+  dateOfBirth         DateTime?
+  yearLevel           String?
+  studentNumber       String?
+  platformId          String?   @unique // e.g. PUP-00001
+  qrCodeData          String?   // Signed QR token for boarding
+  schoolId            String?
+  school              School?   @relation(fields: [schoolId], references: [id])
+  parentId            String
+  parent              Parent    @relation(fields: [parentId], references: [id])
+  pickupLocation      String?
+  pickupPostcode      String?
+  specialRequirements String?
+  activeTransport     Boolean   @default(true)
+  photo               String?
+  status              String    @default("ACTIVE")
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  phone               String?
+  pupilAccount        PupilAccount?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  seatAssignments     SeatAssignment[]
+  absences            Absence[]
+  tripLogs            TripLog[]
+  bookingItems        BookingItem[]
+}
+
+// Pupil login account (separate from parent)
+model PupilAccount {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pupilId   String   @unique
+  pupil     Pupil    @relation(fields: [pupilId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model TransportCompany {
+  id               String    @id @default(cuid())
+  name             String
+  address          String?
+  phone            String?
+  email            String?
+  insuranceExpiry  DateTime?
+  contractStatus   String    @default("ACTIVE")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  vehicles         Vehicle[]
+  drivers          Driver[]
+}
+
+model Vehicle {
+  id            String    @id @default(cuid())
+  companyId     String
+  company       TransportCompany @relation(fields: [companyId], references: [id])
+  type          String    // BUS, CAR, MINIBUS
+  licenceClass  String    @default("PCV")
+  regPlate      String    @unique
+  model         String?
+  make          String?
+  colour        String?
+  seats         Int
+  motExpiry     DateTime?
+  insuranceExpiry DateTime?
+  status        String    @default("ACTIVE") // ACTIVE, IDLE, MAINTENANCE
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  schedules     TransportSchedule[]
+  tripLogs      TripLog[]
+}
+
+model Driver {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId       String?
+  company         TransportCompany? @relation(fields: [companyId], references: [id])
+  licenceNumber   String?
+  licenceClass    String?
+  licenceExpiry   DateTime?
+  dbsCheckDate    DateTime?
+  dbsDocument     String?
+  vehicleId       String?
+  driverStatus    String    @default("ACTIVE")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  schedules       TransportSchedule[]
+  tripLogs        TripLog[]
+  unavailability  DriverUnavailability[]
+}
+
+// PRD3: Driver availability management
+model DriverUnavailability {
+  id          String    @id @default(cuid())
+  driverId    String
+  driver      Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  date        DateTime
+  reason      String
+  status      String    @default("PENDING") // PENDING, SUBSTITUTE_ASSIGNED, RESOLVED
+  substituteDriverId String?
+  adminNotified Boolean @default(false)
+  parentsNotified Boolean @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model TransportSchedule {
+  id              String    @id @default(cuid())
+  routeName       String
+  serviceType     String    @default("BOTH")
+  direction       String
+  schoolId        String?
+  school          School?   @relation(fields: [schoolId], references: [id])
+  vehicleId       String?
+  vehicle         Vehicle?  @relation(fields: [vehicleId], references: [id])
+  driverId        String?
+  driver          Driver?   @relation(fields: [driverId], references: [id])
+  departureTime   String
+  arrivalTime     String?
+  scheduleDate    DateTime?
+  recurrence      String    @default("WEEKDAYS")
+  customDays      String?
+  pickupPostcode  String?
+  dropoffPostcode String?
+  pickupStops     String?
+  dropoffLocation String?
+  pricePerSeat    Float     @default(0)
+  status          String    @default("SCHEDULED")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  seatAssignments SeatAssignment[]
+  tripLogs        TripLog[]
+  bookingItems    BookingItem[]
+}
+
+model SeatAssignment {
+  id         String    @id @default(cuid())
+  scheduleId String
+  schedule   TransportSchedule @relation(fields: [scheduleId], references: [id])
+  pupilId    String
+  pupil      Pupil     @relation(fields: [pupilId], references: [id])
+  seatNumber Int?
+  status     String    @default("ASSIGNED")
+  assignedAt DateTime  @default(now())
+}
+
+model Absence {
+  id          String    @id @default(cuid())
+  pupilId     String
+  pupil       Pupil     @relation(fields: [pupilId], references: [id])
+  date        DateTime
+  reason      String?
+  notified    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+}
+
+model TripLog {
+  id          String    @id @default(cuid())
+  scheduleId  String
+  schedule    TransportSchedule @relation(fields: [scheduleId], references: [id])
+  vehicleId   String?
+  vehicle     Vehicle?  @relation(fields: [vehicleId], references: [id])
+  driverId    String?
+  driver      Driver?   @relation(fields: [driverId], references: [id])
+  pupilId     String?
+  pupil       Pupil?    @relation(fields: [pupilId], references: [id])
+  status      String    // BOARDED, ABSENT, DROPPED, EN_ROUTE, ARRIVED
+  timestamp   DateTime  @default(now())
+  notes       String?
+  latitude    Float?
+  longitude   Float?
+  qrScanned   Boolean   @default(false)
+}
+
+model Booking {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  status          String    @default("PENDING")
+  totalAmount     Float     @default(0)
+  stripeSessionId String?
+  stripePaymentId String?
+  refundId        String?
+  cancelReason    String?
+  cancelledAt     DateTime?
+  refundedAt      DateTime?
+  refundable      Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  items           BookingItem[]
+  payment         Payment?
+  supportTickets  SupportTicket[]
+}
+
+model BookingItem {
+  id          String    @id @default(cuid())
+  bookingId   String
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  scheduleId  String
+  schedule    TransportSchedule @relation(fields: [scheduleId], references: [id])
+  pupilId     String
+  pupil       Pupil     @relation(fields: [pupilId], references: [id])
+  seatNumber  Int
+  direction   String
+  tripDate    DateTime
+  price       Float
+  status      String    @default("ACTIVE")
+  createdAt   DateTime  @default(now())
+}
+
+model BasketItem {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scheduleId  String
+  pupilId     String
+  seatNumber  Int
+  direction   String
+  tripDate    DateTime
+  price       Float
+  createdAt   DateTime  @default(now())
+}
+
+model Payment {
+  id              String    @id @default(cuid())
+  bookingId       String    @unique
+  booking         Booking   @relation(fields: [bookingId], references: [id])
+  amount          Float
+  currency        String    @default("GBP")
+  status          String
+  stripeSessionId String?
+  stripePaymentId String?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+// PRD3: Resolution Centre / Support Tickets
+model SupportTicket {
+  id              String    @id @default(cuid())
+  ticketNumber    String    @unique // e.g. TKT-00001
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  bookingId       String?
+  booking         Booking?  @relation(fields: [bookingId], references: [id])
+  ticketType      String    // REFUND_REQUEST, SERVICE_COMPLAINT, OTHER
+  description     String
+  attachmentUrl   String?
+  status          String    @default("OPEN") // OPEN, UNDER_REVIEW, RESOLVED, REJECTED
+  adminNotes      String?
+  refundProcessed Boolean   @default(false)
+  refundAmount    Float?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  replies         TicketReply[]
+}
+
+model TicketReply {
+  id        String    @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  message   String
+  isAdmin   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  senderId    String?
+  sender      User?     @relation("SentNotifications", fields: [senderId], references: [id])
+  recipientId String
+  recipient   User      @relation("ReceivedNotifications", fields: [recipientId], references: [id])
+  type        String
+  subject     String?
+  message     String
+  triggerEvent String?
+  read        Boolean   @default(false)
+  sentAt      DateTime  @default(now())
+}
+
+model ChatMessage {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  role        String
+  content     String
+  createdAt   DateTime  @default(now())
+}
+
+model HolidayPeriod {
+  id          String    @id @default(cuid())
+  schoolId    String?
+  school      School?   @relation(fields: [schoolId], references: [id])
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime  @default(now())
+}
+
+model Document {
+  id          String    @id @default(cuid())
+  entityType  String
+  entityId    String
+  docType     String
+  fileName    String
+  fileUrl     String
+  expiryDate  DateTime?
+  uploadedBy  String?
+  createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+  action      String
+  entity      String
+  entityId    String?
+  before      String?
+  after       String?
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime  @default(now())
+}
+
+model NotificationTemplate {
+  id          String    @id @default(cuid())
+  name        String
+  triggerEvent String   @unique
+  smsTemplate  String?
+  emailSubject String?
+  emailTemplate String?
+  active      Boolean   @default(true)
+  updatedAt   DateTime  @updatedAt
+}
+
+// ─── Recruitment / Careers Module ───
+
+model JobApplication {
+  id              String    @id @default(cuid())
+  referenceCode   String    @unique // e.g. CAR-XXXXXX
+  status          String    @default("PENDING") // PENDING, REVIEWED, INTERVIEW, HIRED, REJECTED
+
+  // Positions applied for (comma-separated role IDs, e.g. "operations,drivers")
+  positionIds     String
+  // Positions display names (comma-separated, e.g. "Operations,Drivers")
+  positionNames   String
+
+  // Personal Details
+  title           String?
+  firstName       String
+  middleNames     String?
+  surname         String
+  address         String?
+  postCode        String?
+  dateOfBirth     String?
+  niNumber        String?
+  nationality     String?
+  religion        String?
+  email           String
+  mobile          String?
+  landline        String?
+  languages       String?
+
+  // Next of Kin
+  nokName         String?
+  nokAddress      String?
+  nokTelephone    String?
+
+  // Medical History
+  disability        String?
+  disabilityDetails String?
+  registeredDisabled String?
+  medicalConditions  String?
+  currentMedication  String?
+
+  // Education & Training (JSON arrays)
+  academicHistory   String?   // JSON: [{from, to, school, qualification}]
+  otherQualifications String? // JSON: [string]
+
+  // Employment History (JSON array)
+  employmentHistory String?   // JSON: [{from, to, employer, responsibilities, reason}]
+
+  // Role-specific data (JSON object per role)
+  roleSpecificData  String?   // JSON: { roleId: { motivation, skills[], questions, experience } }
+
+  // Rehabilitation of Offenders
+  criminalRecord    String?
+  noCriminalRecord  String?
+  futureDisclosure  String?
+  addressHistory    String?   // JSON: [{address, dates}]
+
+  // Leisure
+  leisureInterests  String?
+
+  // References (JSON)
+  references        String?   // JSON: [{name, title, company, email, tel, address}]
+
+  // Equal Opportunities
+  eoEthnicity       String?
+  eoGender          String?
+  eoAge             String?
+
+  // Declaration
+  signatureName     String?
+  signatureDate     String?
+  agreeDeclaration  Boolean   @default(false)
+
+  // Interview details (JSON)
+  interviewData     String?   // JSON: {date, time, type, location, interviewer, notes, scheduledAt}
+
+  // Hire / Employee info (JSON)
+  employeeData      String?   // JSON: {employeeId, position, startDate, username, password, createdAt}
+
+  // Internal notes (JSON array)
+  internalNotes     String?   // JSON: [{text, author, at}]
+
+  submittedAt       DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  files             JobApplicationFile[]
+}
+
+model JobApplicationFile {
+  id              String    @id @default(cuid())
+  applicationId   String
+  application     JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fileName        String
+  fileSize        Int?
+  fileType        String?
+  fileUrl         String    // Path or base64 data URL
+  uploadedAt      DateTime  @default(now())
+}

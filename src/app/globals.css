@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: 255 255 255;
+  --foreground: 0 0 0;
+}
+
+.dark {
+  --background: 0 0 0;
+  --foreground: 255 255 255;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: #f9fafb;
+  color: #111827;
+  font-family: var(--font-geist-sans, Inter, system-ui, sans-serif);
+}
+
+.dark body {
+  background: #0a0a0a;
+  color: #f9fafb;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+.dark ::-webkit-scrollbar-track { background: #1a1a1a; }
+.dark ::-webkit-scrollbar-thumb { background: #555; }
+
+/* Focus styles */
+*:focus-visible { outline: 2px solid #000; outline-offset: 2px; }
+.dark *:focus-visible { outline-color: #fff; }
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+
+/* Print styles */
+@media print {
+  .no-print { display: none \!important; }
+  .print-only { display: block \!important; }
+}

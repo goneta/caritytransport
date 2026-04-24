@@ -1,0 +1,3778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sinan Care – Application for Employment</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal-900: #0d3b3f;
+    --teal-700: #155e63;
+    --teal-600: #1a7a80;
+    --teal-500: #20969e;
+    --teal-100: #d4f0f2;
+    --teal-50: #eef9fa;
+    --sand-50: #faf8f5;
+    --sand-100: #f3efe8;
+    --sand-200: #e8e1d5;
+    --coral: #e07456;
+    --coral-light: #f4a989;
+    --white: #ffffff;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --red-500: #ef4444;
+    --red-50: #fef2f2;
+    --green-500: #10b981;
+    --green-50: #ecfdf5;
+    --radius: 10px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--sand-50);
+    color: var(--gray-800);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ─── Background Pattern ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(20,94,99,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(224,116,86,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── Header ─── */
+  .site-header {
+    background: var(--teal-900);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .site-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--teal-500), var(--coral), var(--teal-500));
+  }
+
+  .header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+
+  .header-logo {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, var(--teal-500), var(--coral));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -1px;
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -0.5px;
+  }
+
+  .header-text p {
+    font-size: 14px;
+    color: var(--teal-100);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  .header-notice {
+    margin-top: 18px;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 8px;
+    border-left: 3px solid var(--coral);
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.55;
+  }
+
+  /* ─── Progress Bar ─── */
+  .progress-bar-container {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .progress-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 12px 24px;
+  }
+
+  .progress-steps {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .progress-step {
+    flex: 1;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--gray-200);
+    transition: background 0.4s ease;
+  }
+
+  .progress-step.active { background: var(--teal-600); }
+  .progress-step.completed { background: var(--teal-500); }
+
+  .progress-label {
+    font-size: 12px;
+    color: var(--gray-500);
+    font-weight: 500;
+  }
+
+  /* ─── Main Form Container ─── */
+  .main-container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── Sections ─── */
+  .form-section {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+    margin-top: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .form-section:hover { box-shadow: var(--shadow-md); }
+
+  .section-header {
+    padding: 20px 28px;
+    background: var(--teal-50);
+    border-bottom: 1px solid var(--teal-100);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--teal-700);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .section-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--teal-900);
+  }
+
+  .section-body { padding: 28px; }
+
+  /* ─── Form Fields ─── */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .field-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+
+  .field-full { grid-column: 1 / -1; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+    letter-spacing: 0.02em;
+  }
+
+  .form-group label .required {
+    color: var(--coral);
+    margin-left: 2px;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="email"],
+  .form-group input[type="tel"],
+  .form-group input[type="date"],
+  .form-group input[type="number"],
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--gray-300);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--gray-800);
+    background: var(--white);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--teal-500);
+    box-shadow: 0 0 0 3px rgba(32,150,158,0.12);
+  }
+
+  .form-group input.field-error,
+  .form-group textarea.field-error {
+    border-color: var(--red-500) !important;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.1) !important;
+  }
+
+  .field-error-msg {
+    font-size: 12px;
+    color: var(--red-500);
+    margin-top: 3px;
+    display: none;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .field-error-msg.visible { display: flex; }
+
+  .field-error-msg::before {
+    content: '⚠';
+    font-size: 11px;
+  }
+
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  .form-group select { cursor: pointer; }
+
+  /* ─── Radio & Checkbox Groups ─── */
+  .radio-group, .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 2px;
+  }
+
+  .radio-option, .checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+
+  .radio-option input, .checkbox-option input {
+    accent-color: var(--teal-600);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  /* ─── Repeatable Table Sections ─── */
+  .table-section { margin-top: 16px; }
+
+  .entry-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .entry-card .entry-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--teal-600);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+  }
+
+  .remove-entry {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    transition: color 0.2s;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .remove-entry:hover { color: var(--red-500); background: var(--red-50); }
+
+  .add-entry-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: var(--teal-50);
+    color: var(--teal-700);
+    border: 1.5px dashed var(--teal-500);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+
+  .add-entry-btn:hover { background: var(--teal-100); }
+
+  /* ─── Skills Checklist ─── */
+  .skills-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .skill-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--gray-50);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    transition: all 0.2s;
+  }
+
+  .skill-item:hover { border-color: var(--teal-500); background: var(--teal-50); }
+
+  .skill-item label {
+    font-size: 14px;
+    color: var(--gray-700);
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .skill-item input[type="checkbox"] {
+    accent-color: var(--teal-600);
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  /* ─── Criminal Record Options ─── */
+  .declaration-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .declaration-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .declaration-option:hover { border-color: var(--teal-500); background: var(--teal-50); }
+
+  .declaration-option input {
+    accent-color: var(--teal-600);
+    width: 18px;
+    height: 18px;
+  }
+
+  .declaration-option span { font-size: 14px; color: var(--gray-700); }
+
+  /* ─── Address History ─── */
+  .address-history-entry {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    padding: 16px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+
+  /* ─── Equal Opportunities ─── */
+  .eo-notice {
+    padding: 16px 20px;
+    background: var(--teal-50);
+    border-radius: 8px;
+    border: 1px solid var(--teal-100);
+    font-size: 13px;
+    color: var(--gray-600);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .eo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .eo-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+    color: var(--gray-700);
+  }
+
+  .eo-option:hover { border-color: var(--teal-500); background: var(--teal-50); }
+
+  .eo-option input { accent-color: var(--teal-600); }
+
+  /* ─── Declaration ─── */
+  .declaration-box {
+    padding: 24px;
+    background: var(--sand-100);
+    border-radius: 8px;
+    border: 1px solid var(--sand-200);
+    font-size: 13.5px;
+    color: var(--gray-600);
+    line-height: 1.65;
+    margin-bottom: 24px;
+  }
+
+  .declaration-box ul {
+    margin: 10px 0 10px 20px;
+    list-style: disc;
+  }
+
+  .declaration-box ul li { margin-bottom: 4px; }
+
+  .signature-area {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    align-items: end;
+  }
+
+  /* ─── Submit Section ─── */
+  .submit-section {
+    margin-top: 32px;
+    text-align: center;
+  }
+
+  .submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 48px;
+    background: linear-gradient(135deg, var(--teal-700), var(--teal-600));
+    color: var(--white);
+    border: none;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 16px rgba(21,94,99,0.3);
+    letter-spacing: 0.02em;
+  }
+
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(21,94,99,0.35);
+  }
+
+  .submit-btn:active { transform: translateY(0); }
+
+  .submit-btn svg { width: 20px; height: 20px; }
+
+  /* ─── Success Modal ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .modal-overlay.visible { display: flex; }
+
+  .modal-content {
+    background: var(--white);
+    border-radius: 16px;
+    max-width: 520px;
+    width: 100%;
+    padding: 40px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 0.3s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .modal-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--green-50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+  }
+
+  .modal-icon svg { width: 32px; height: 32px; color: var(--green-500); }
+
+  .modal-content h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--teal-900);
+    margin-bottom: 8px;
+  }
+
+  .modal-content p {
+    font-size: 14px;
+    color: var(--gray-500);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .modal-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  .btn-download, .btn-email, .btn-close-modal {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-download {
+    background: var(--teal-700);
+    color: var(--white);
+  }
+
+  .btn-download:hover { background: var(--teal-600); }
+
+  .btn-email {
+    background: var(--coral);
+    color: var(--white);
+  }
+
+  .btn-email:hover { background: var(--coral-light); }
+
+  .btn-close-modal {
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  .btn-close-modal:hover { background: var(--gray-200); }
+
+  /* ─── Separator ─── */
+  .field-separator {
+    border: none;
+    border-top: 1px solid var(--gray-200);
+    margin: 20px 0;
+  }
+
+  .sub-heading {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--teal-700);
+    margin-bottom: 14px;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 640px) {
+    .field-grid, .field-grid-3 { grid-template-columns: 1fr; }
+    .signature-area { grid-template-columns: 1fr; }
+    .address-history-entry { grid-template-columns: 1fr; }
+    .header-inner { padding: 24px 16px 20px; }
+    .section-body { padding: 20px 16px; }
+    .header-text h1 { font-size: 22px; }
+    .modal-content { padding: 28px 20px; }
+  }
+
+  /* ─── Loading spinner ─── */
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Footer ─── */
+  /* ─── Return Notice ─── */
+  .return-notice {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-top: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .return-notice p {
+    font-size: 14px;
+    color: var(--gray-700);
+    line-height: 1.7;
+  }
+
+  .return-notice p strong { color: var(--teal-900); }
+  .return-notice p a { color: var(--teal-600); font-weight: 600; text-decoration: none; }
+  .return-notice p a:hover { text-decoration: underline; }
+
+  /* ─── Office Use Table ─── */
+  .office-use-section {
+    margin-top: 24px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .office-use-title {
+    text-align: center;
+    padding: 16px 24px;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--gray-800);
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    text-decoration: underline;
+  }
+
+  .office-use-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .office-use-table th {
+    padding: 12px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+    text-align: left;
+    border: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    line-height: 1.4;
+    vertical-align: top;
+  }
+
+  .office-use-table td {
+    padding: 24px 10px;
+    border: 1px solid var(--gray-200);
+    min-height: 48px;
+    vertical-align: top;
+  }
+
+  @media print {
+    .office-use-table td { min-height: 60px; }
+  }
+
+  /* ─── Part Divider ─── */
+  .part-divider {
+    margin-top: 48px;
+    position: relative;
+    text-align: center;
+    padding: 0;
+  }
+
+  .part-divider::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--teal-500), var(--coral), var(--teal-500), transparent);
+  }
+
+  .part-divider-badge {
+    position: relative;
+    display: inline-block;
+    background: var(--teal-900);
+    color: var(--white);
+    padding: 10px 28px;
+    border-radius: 50px;
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .part-banner {
+    margin-top: 16px;
+    background: linear-gradient(135deg, var(--teal-900), var(--teal-700));
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .part-banner::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--teal-500), var(--coral), var(--teal-500));
+  }
+
+  .part-banner h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+
+  .part-banner p {
+    font-size: 13px;
+    color: var(--teal-100);
+    line-height: 1.5;
+  }
+
+  .part-banner .company-contact {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.6;
+  }
+
+  /* ─── Yes/No Question Table ─── */
+  .health-questions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+
+  .health-questions-table thead th {
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 2px solid var(--teal-600);
+    text-align: left;
+    color: var(--teal-900);
+  }
+
+  .health-questions-table thead th:nth-child(3),
+  .health-questions-table thead th:nth-child(4) {
+    text-align: center;
+    width: 60px;
+  }
+
+  .health-questions-table tbody tr {
+    border-bottom: 1px solid var(--gray-200);
+    transition: background 0.15s;
+  }
+
+  .health-questions-table tbody tr:hover { background: var(--teal-50); }
+
+  .health-questions-table tbody td {
+    padding: 12px;
+    font-size: 13.5px;
+    color: var(--gray-700);
+    vertical-align: middle;
+  }
+
+  .health-questions-table tbody td:first-child {
+    font-weight: 700;
+    color: var(--teal-700);
+    width: 36px;
+    text-align: center;
+  }
+
+  .health-questions-table tbody td:nth-child(3),
+  .health-questions-table tbody td:nth-child(4) {
+    text-align: center;
+    width: 60px;
+  }
+
+  .health-questions-table tbody td input[type="radio"] {
+    accent-color: var(--teal-600);
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .health-questions-table .sub-row td {
+    padding-left: 42px;
+    font-size: 13px;
+  }
+
+  .health-questions-table .group-header td {
+    font-weight: 600;
+    color: var(--teal-900);
+    background: var(--gray-50);
+    padding-top: 14px;
+  }
+
+  /* ─── Details Table ─── */
+  .details-grid {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 0;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .details-grid .dg-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--teal-900);
+    padding: 10px 12px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .details-grid .dg-row-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--teal-700);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    border-right: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    display: flex;
+    align-items: center;
+  }
+
+  .details-grid .dg-row-input {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+  }
+
+  .details-grid .dg-row-input textarea {
+    width: 100%;
+    border: none;
+    resize: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 6px;
+    color: var(--gray-800);
+    background: transparent;
+    outline: none;
+    min-height: 32px;
+  }
+
+  .details-grid .dg-row-input textarea:focus {
+    background: var(--teal-50);
+    border-radius: 4px;
+  }
+
+  /* ─── Important Notice ─── */
+  .important-notice {
+    padding: 16px 20px;
+    background: #fef8e7;
+    border: 1px solid #f5dfa0;
+    border-left: 4px solid #e6a817;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .important-notice strong {
+    color: #92600a;
+    font-size: 13px;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .important-notice p {
+    font-size: 13px;
+    color: #7a5a12;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* ─── Tab Navigation ─── */
+  .tab-nav {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 16px 24px 0;
+    display: flex;
+    gap: 6px;
+    position: relative;
+    z-index: 101;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 14px 20px;
+    background: var(--white);
+    border: 1.5px solid var(--gray-200);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+    top: 1px;
+  }
+
+  .tab-btn:hover { color: var(--teal-700); background: var(--teal-50); }
+
+  .tab-btn.active {
+    background: var(--white);
+    color: var(--teal-900);
+    border-color: var(--gray-200);
+    box-shadow: 0 -3px 10px rgba(0,0,0,0.04);
+  }
+
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0; right: 0;
+    height: 2px;
+    background: var(--white);
+  }
+
+  .tab-btn .tab-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.25s;
+  }
+
+  .tab-btn:first-child .tab-icon {
+    background: var(--teal-100);
+    color: var(--teal-700);
+  }
+
+  .tab-btn:first-child.active .tab-icon {
+    background: var(--teal-700);
+    color: var(--white);
+  }
+
+  .tab-btn:last-child .tab-icon {
+    background: var(--sand-100);
+    color: var(--coral);
+  }
+
+  .tab-btn:last-child.active .tab-icon {
+    background: var(--coral);
+    color: var(--white);
+  }
+
+  .tab-btn .tab-label { line-height: 1.2; }
+  .tab-btn .tab-label small { display: block; font-size: 11px; font-weight: 400; color: var(--gray-400); margin-top: 1px; }
+  .tab-btn.active .tab-label small { color: var(--gray-500); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ─── Rating Table ─── */
+  .rating-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+
+  .rating-table thead th {
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 2px solid var(--teal-600);
+    text-align: center;
+    color: var(--teal-900);
+  }
+
+  .rating-table thead th:first-child { text-align: left; }
+
+  .rating-table tbody tr {
+    border-bottom: 1px solid var(--gray-200);
+    transition: background 0.15s;
+  }
+
+  .rating-table tbody tr:hover { background: var(--teal-50); }
+
+  .rating-table tbody td {
+    padding: 14px 12px;
+    font-size: 14px;
+    color: var(--gray-700);
+    vertical-align: middle;
+    text-align: center;
+  }
+
+  .rating-table tbody td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+
+  .rating-table tbody td input[type="radio"] {
+    accent-color: var(--teal-600);
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  /* ─── Child Protection ─── */
+  .child-protection-box {
+    padding: 20px 24px;
+    background: #fef8e7;
+    border: 1px solid #f5dfa0;
+    border-left: 4px solid #e6a817;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 13.5px;
+    color: #7a5a12;
+    line-height: 1.6;
+  }
+
+  .child-protection-box strong { color: #92600a; }
+
+  /* ─── Data Protection Box ─── */
+  .data-protection-box {
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--gray-500);
+    line-height: 1.65;
+    margin-bottom: 20px;
+  }
+
+  .data-protection-box p + p { margin-top: 10px; }
+
+  /* ─── Ref Progress ─── */
+  .ref-progress-bar-container {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ref-progress-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 12px 24px;
+  }
+
+  .ref-progress-steps {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .ref-progress-step {
+    flex: 1;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--gray-200);
+    transition: background 0.4s ease;
+  }
+
+  .ref-progress-step.active { background: var(--coral); }
+  .ref-progress-step.completed { background: var(--coral-light); }
+
+  .site-footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-top: 20px;
+  }
+
+  .site-footer a { color: var(--teal-600); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ HEADER ══════════ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="header-logo">SC</div>
+      <div class="header-text">
+        <h1>Sinan Care Ltd</h1>
+        <p>Application for Employment</p>
+      </div>
+    </div>
+    <div class="header-notice">
+      <strong>Important:</strong> All information provided will be treated with full confidentiality. Candidates are shortlisted based on the application form alone. Please ensure <strong>all sections</strong> are completed in full. Do not send a CV in place of this form — you may attach one alongside it.
+    </div>
+  </div>
+</header>
+
+<!-- ══════════ TAB NAVIGATION ══════════ -->
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('tab1')" id="tabBtn1">
+    <span class="tab-icon">1-2</span>
+    <span class="tab-label">Application Form<small>Parts 1 &amp; 2 – Applicant</small></span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('tab2')" id="tabBtn2">
+    <span class="tab-icon">3</span>
+    <span class="tab-label">Reference Form<small>Part 3 – Referee</small></span>
+  </button>
+</nav>
+
+<!-- ══════════ TAB 1: APPLICATION FORM ══════════ -->
+<div id="tab1Content" class="tab-content active">
+
+<!-- ══════════ PROGRESS BAR ══════════ -->
+<div class="progress-bar-container">
+  <div class="progress-inner">
+    <div class="progress-steps">
+      <div class="progress-step active" data-section="1"></div>
+      <div class="progress-step" data-section="2"></div>
+      <div class="progress-step" data-section="3"></div>
+      <div class="progress-step" data-section="4"></div>
+      <div class="progress-step" data-section="5"></div>
+      <div class="progress-step" data-section="6"></div>
+      <div class="progress-step" data-section="7"></div>
+      <div class="progress-step" data-section="8"></div>
+    </div>
+    <div class="progress-label">Section <span id="currentSection">1</span> of 8</div>
+  </div>
+</div>
+
+<!-- ══════════ MAIN FORM ══════════ -->
+<main class="main-container">
+<form id="applicationForm" novalidate>
+
+  <!-- ─── SECTION 1: PERSONAL DETAILS ─── -->
+  <div class="form-section" data-section="1">
+    <div class="section-header">
+      <div class="section-number">1</div>
+      <h2>Personal Details</h2>
+    </div>
+    <div class="section-body">
+      <!-- Title -->
+      <div class="form-group field-full" style="margin-bottom:20px">
+        <label>Title <span class="required">*</span></label>
+        <div class="radio-group">
+          <label class="radio-option"><input type="radio" name="title" value="Mr"> Mr</label>
+          <label class="radio-option"><input type="radio" name="title" value="Mrs"> Mrs</label>
+          <label class="radio-option"><input type="radio" name="title" value="Miss"> Miss</label>
+          <label class="radio-option"><input type="radio" name="title" value="Ms"> Ms</label>
+          <label class="radio-option"><input type="radio" name="title" value="Other"> Other</label>
+        </div>
+      </div>
+
+      <div class="field-grid-3">
+        <div class="form-group">
+          <label for="firstName">First Name <span class="required">*</span></label>
+          <input type="text" id="firstName" name="firstName" required>
+        </div>
+        <div class="form-group">
+          <label for="middleNames">Middle Names</label>
+          <input type="text" id="middleNames" name="middleNames">
+        </div>
+        <div class="form-group">
+          <label for="surname">Surname <span class="required">*</span></label>
+          <input type="text" id="surname" name="surname" required>
+        </div>
+      </div>
+
+      <div class="field-grid" style="margin-top:20px">
+        <div class="form-group field-full">
+          <label for="address">Address <span class="required">*</span></label>
+          <input type="text" id="address" name="address" required>
+        </div>
+        <div class="form-group">
+          <label for="postCode">Post Code <span class="required">*</span></label>
+          <input type="text" id="postCode" name="postCode" required>
+        </div>
+        <div class="form-group">
+          <label for="dob">Date of Birth <span class="required">*</span></label>
+          <input type="text" id="dob" name="dob" placeholder="dd/mm/yyyy" data-validate="date" required>
+        </div>
+        <div class="form-group">
+          <label for="niNumber">National Insurance No <span class="required">*</span></label>
+          <input type="text" id="niNumber" name="niNumber" placeholder="e.g. QQ 12 34 56 C" required>
+        </div>
+        <div class="form-group">
+          <label for="nationality">Nationality</label>
+          <input type="text" id="nationality" name="nationality">
+        </div>
+        <div class="form-group">
+          <label for="ethnicity">Ethnicity</label>
+          <input type="text" id="ethnicity" name="ethnicity">
+        </div>
+        <div class="form-group">
+          <label for="religion">Religion</label>
+          <input type="text" id="religion" name="religion">
+        </div>
+      </div>
+
+      <hr class="field-separator">
+      <div class="sub-heading">Contact Details</div>
+      <div class="field-grid-3">
+        <div class="form-group">
+          <label for="landline">Landline</label>
+          <input type="tel" id="landline" name="landline" data-validate="phone" placeholder="e.g. 020 1234 5678">
+        </div>
+        <div class="form-group">
+          <label for="mobile">Mobile <span class="required">*</span></label>
+          <input type="tel" id="mobile" name="mobile" data-validate="phone" placeholder="e.g. 07123 456789" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email <span class="required">*</span></label>
+          <input type="email" id="email" name="email" data-validate="email" required>
+        </div>
+      </div>
+
+      <div class="field-grid" style="margin-top:20px">
+        <div class="form-group field-full">
+          <label for="languages">Languages Spoken</label>
+          <input type="text" id="languages" name="languages">
+        </div>
+      </div>
+
+      <hr class="field-separator">
+      <div class="sub-heading">Next of Kin</div>
+      <div class="field-grid-3">
+        <div class="form-group">
+          <label for="nokName">Name</label>
+          <input type="text" id="nokName" name="nokName">
+        </div>
+        <div class="form-group">
+          <label for="nokAddress">Address</label>
+          <input type="text" id="nokAddress" name="nokAddress">
+        </div>
+        <div class="form-group">
+          <label for="nokTelephone">Telephone</label>
+          <input type="tel" id="nokTelephone" name="nokTelephone" data-validate="phone">
+        </div>
+      </div>
+
+      <hr class="field-separator">
+      <div class="field-grid">
+        <div class="form-group field-full">
+          <label for="positionApplied">Position Applied For <span class="required">*</span></label>
+          <input type="text" id="positionApplied" name="positionApplied" required>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 2: MEDICAL HISTORY ─── -->
+  <div class="form-section" data-section="2">
+    <div class="section-header">
+      <div class="section-number">2</div>
+      <h2>Medical History</h2>
+    </div>
+    <div class="section-body">
+      <div class="field-grid">
+        <div class="form-group">
+          <label>Do you have a disability?</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="disability" value="Yes" onchange="toggleField('disabilityDetails', true)"> Yes</label>
+            <label class="radio-option"><input type="radio" name="disability" value="No" onchange="toggleField('disabilityDetails', false)"> No</label>
+          </div>
+        </div>
+        <div class="form-group" id="disabilityDetailsGroup" style="display:none">
+          <label for="disabilityDetails">If YES, please give details</label>
+          <textarea id="disabilityDetails" name="disabilityDetails" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="field-grid" style="margin-top:20px">
+        <div class="form-group">
+          <label>Are you registered disabled?</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="registeredDisabled" value="Yes" onchange="toggleField('regDisabledNo', true)"> Yes</label>
+            <label class="radio-option"><input type="radio" name="registeredDisabled" value="No" onchange="toggleField('regDisabledNo', false)"> No</label>
+          </div>
+        </div>
+        <div class="form-group" id="regDisabledNoGroup" style="display:none">
+          <label for="regDisabledNo">Registration Number</label>
+          <input type="text" id="regDisabledNo" name="regDisabledNo">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:20px">
+        <label for="medicalConditions">Please list any diseases, disorders, allergies, muscular or muscular-skeletal injuries which you have suffered or do suffer from (e.g. Back problem, Depression, Asthma, Epilepsy)</label>
+        <textarea id="medicalConditions" name="medicalConditions" rows="3"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-top:20px">
+        <label for="currentMedication">Please detail any medicine(s), drugs or treatment you are currently and/or regularly receiving</label>
+        <textarea id="currentMedication" name="currentMedication" rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 3: EDUCATION & TRAINING ─── -->
+  <div class="form-section" data-section="3">
+    <div class="section-header">
+      <div class="section-number">3</div>
+      <h2>Education and Training History</h2>
+    </div>
+    <div class="section-body">
+      <div class="sub-heading">Academic Qualifications</div>
+      <div id="academicEntries">
+        <div class="entry-card academic-entry">
+          <div class="entry-label">Qualification 1</div>
+          <div class="field-grid">
+            <div class="form-group">
+              <label>From (Date)</label>
+              <input type="text" name="acadFrom[]" placeholder="e.g. Sep 2010">
+            </div>
+            <div class="form-group">
+              <label>To (Date)</label>
+              <input type="text" name="acadTo[]" placeholder="e.g. Jun 2014">
+            </div>
+            <div class="form-group">
+              <label>School/College Attended</label>
+              <input type="text" name="acadSchool[]">
+            </div>
+            <div class="form-group">
+              <label>Qualifications Obtained ('O'/'A' Levels, Diploma, Degree)</label>
+              <input type="text" name="acadQual[]">
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="add-entry-btn" onclick="addAcademicEntry()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Another Qualification
+      </button>
+
+      <hr class="field-separator" style="margin-top:28px">
+      <div class="sub-heading">Other Qualifications / Courses Attended / Awards Attained</div>
+      <div id="otherQualEntries">
+        <div class="entry-card other-qual-entry">
+          <div class="entry-label">Entry 1</div>
+          <div class="field-grid">
+            <div class="form-group field-full">
+              <label>Qualification / Course / Award</label>
+              <input type="text" name="otherQual[]">
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="add-entry-btn" onclick="addOtherQualEntry()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Another Entry
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 4: EMPLOYMENT HISTORY ─── -->
+  <div class="form-section" data-section="4">
+    <div class="section-header">
+      <div class="section-number">4</div>
+      <h2>Employment History</h2>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">Please list your employment history since leaving school, beginning with your present or most recent job. Include any breaks/periods when you were not working and the reason.</p>
+
+      <div id="employmentEntries">
+        <div class="entry-card employment-entry">
+          <div class="entry-label">Employment 1</div>
+          <div class="field-grid">
+            <div class="form-group">
+              <label>From (Date)</label>
+              <input type="text" name="empFrom[]" placeholder="e.g. Jan 2020">
+            </div>
+            <div class="form-group">
+              <label>To (Date)</label>
+              <input type="text" name="empTo[]" placeholder="e.g. Present">
+            </div>
+            <div class="form-group field-full">
+              <label>Name &amp; Address of Employer</label>
+              <input type="text" name="empEmployer[]">
+            </div>
+            <div class="form-group field-full">
+              <label>Job Title &amp; Key Responsibilities</label>
+              <textarea name="empResponsibilities[]" rows="2"></textarea>
+            </div>
+            <div class="form-group field-full">
+              <label>Reason(s) for Leaving</label>
+              <input type="text" name="empReason[]">
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="add-entry-btn" onclick="addEmploymentEntry()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Another Employment
+      </button>
+
+      <hr class="field-separator" style="margin-top:28px">
+      <div class="field-grid">
+        <div class="form-group">
+          <label>Do you have any other employment?</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="otherEmployment" value="Yes" onchange="toggleField('otherEmploymentDetails', true)"> Yes</label>
+            <label class="radio-option"><input type="radio" name="otherEmployment" value="No" onchange="toggleField('otherEmploymentDetails', false)"> No</label>
+          </div>
+        </div>
+        <div class="form-group" id="otherEmploymentDetailsGroup" style="display:none">
+          <label for="otherEmploymentDetails">Please give details</label>
+          <textarea id="otherEmploymentDetails" name="otherEmploymentDetails" rows="2"></textarea>
+        </div>
+      </div>
+
+      <hr class="field-separator">
+      <div class="sub-heading">Skills and Experience</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Have you received training in the following areas? Please tick all that apply.</p>
+      <div class="skills-grid">
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="First Aid"> First Aid Qualifications/Experience</label>
+        </div>
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="Moving/Transferring"> Moving/Transferring: Use of Hoists/Wheelchairs/Sticks/Zimmer frames</label>
+        </div>
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="Personal Care"> Personal Care including bathing/washing/dressing/undressing/eye care/ear care/mouth care/hair care/nail care</label>
+        </div>
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="Toileting"> Toileting including urine bags/commodes/catheter bags/pads day/night</label>
+        </div>
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="Physical Disabilities"> Working with people with physical disabilities</label>
+        </div>
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="Mental Health"> Working with people with mental health problems</label>
+        </div>
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="Chronically Ill"> Working with chronically ill</label>
+        </div>
+        <div class="skill-item">
+          <label><input type="checkbox" name="skills[]" value="Learning Difficulty"> Working with people with learning difficulty</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 5: REHABILITATION OF OFFENDERS ─── -->
+  <div class="form-section" data-section="5">
+    <div class="section-header">
+      <div class="section-number">5</div>
+      <h2>Rehabilitation of Offenders Act</h2>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">You <strong>must</strong> declare any criminal convictions and/or pending prosecutions, including cautions. You must declare all criminal convictions, even those considered 'spent'. A criminal record will not necessarily stop you from being offered a job with Sinan Care.</p>
+
+      <div class="sub-heading">Disclosure &amp; Barring Declaration</div>
+      <div class="declaration-options">
+        <label class="declaration-option">
+          <input type="checkbox" name="criminalRecord" value="I have a criminal record">
+          <span>I have a criminal record</span>
+        </label>
+        <label class="declaration-option">
+          <input type="checkbox" name="noCriminalRecord" value="I do not have a criminal record">
+          <span>I do not have a criminal record</span>
+        </label>
+        <label class="declaration-option">
+          <input type="checkbox" name="futureDisclosure" value="I agree to disclose any future prosecutions/convictions">
+          <span>I agree to disclose any future prosecutions / convictions</span>
+        </label>
+      </div>
+
+      <hr class="field-separator">
+      <div class="sub-heading">Address History (Past 5 Years)</div>
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">If you have lived at your current address for the past five years, please state so.</p>
+
+      <div class="address-history-entry">
+        <div class="form-group">
+          <label>Address 1</label>
+          <input type="text" name="addrHistory1" id="addrHistory1">
+        </div>
+        <div class="form-group">
+          <label>Dates (MM/YYYY)</label>
+          <input type="text" name="addrDates1" id="addrDates1" placeholder="e.g. 01/2020 – Present">
+        </div>
+      </div>
+      <div class="address-history-entry">
+        <div class="form-group">
+          <label>Address 2</label>
+          <input type="text" name="addrHistory2" id="addrHistory2">
+        </div>
+        <div class="form-group">
+          <label>Dates (MM/YYYY)</label>
+          <input type="text" name="addrDates2" id="addrDates2">
+        </div>
+      </div>
+      <div class="address-history-entry">
+        <div class="form-group">
+          <label>Address 3</label>
+          <input type="text" name="addrHistory3" id="addrHistory3">
+        </div>
+        <div class="form-group">
+          <label>Dates (MM/YYYY)</label>
+          <input type="text" name="addrDates3" id="addrDates3">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 6: LEISURE INTERESTS ─── -->
+  <div class="form-section" data-section="6">
+    <div class="section-header">
+      <div class="section-number">6</div>
+      <h2>Leisure Interests</h2>
+    </div>
+    <div class="section-body">
+      <div class="form-group">
+        <label for="leisureInterests">Please note your leisure interests / sports / hobbies or other pastimes</label>
+        <textarea id="leisureInterests" name="leisureInterests" rows="4"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 7: REFERENCES ─── -->
+  <div class="form-section" data-section="7">
+    <div class="section-header">
+      <div class="section-number">7</div>
+      <h2>References</h2>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:20px">Please nominate two referees, one of whom must be your present employer or, if unemployed, your most recent employer, or someone who can comment on your professional capabilities (not relatives or personal friends).</p>
+
+      <div class="sub-heading">Reference 1 (Present / Most Recent Employer)</div>
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="ref1Name">Name</label>
+          <input type="text" id="ref1Name" name="ref1Name">
+        </div>
+        <div class="form-group">
+          <label for="ref1Title">Title</label>
+          <input type="text" id="ref1Title" name="ref1Title">
+        </div>
+        <div class="form-group">
+          <label for="ref1Company">Company</label>
+          <input type="text" id="ref1Company" name="ref1Company">
+        </div>
+        <div class="form-group">
+          <label for="ref1Tel">Tel. No</label>
+          <input type="tel" id="ref1Tel" name="ref1Tel" data-validate="phone">
+        </div>
+        <div class="form-group field-full">
+          <label for="ref1Address">Address</label>
+          <input type="text" id="ref1Address" name="ref1Address">
+        </div>
+        <div class="form-group field-full">
+          <label for="ref1Email">Email Address</label>
+          <input type="email" id="ref1Email" name="ref1Email" data-validate="email">
+        </div>
+      </div>
+
+      <hr class="field-separator">
+      <div class="sub-heading">Reference 2</div>
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="ref2Name">Name</label>
+          <input type="text" id="ref2Name" name="ref2Name">
+        </div>
+        <div class="form-group">
+          <label for="ref2Title">Title</label>
+          <input type="text" id="ref2Title" name="ref2Title">
+        </div>
+        <div class="form-group">
+          <label for="ref2Company">Company</label>
+          <input type="text" id="ref2Company" name="ref2Company">
+        </div>
+        <div class="form-group">
+          <label for="ref2Tel">Tel. No</label>
+          <input type="tel" id="ref2Tel" name="ref2Tel" data-validate="phone">
+        </div>
+        <div class="form-group field-full">
+          <label for="ref2Address">Address</label>
+          <input type="text" id="ref2Address" name="ref2Address">
+        </div>
+        <div class="form-group field-full">
+          <label for="ref2Email">Email Address</label>
+          <input type="email" id="ref2Email" name="ref2Email" data-validate="email">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 8: EQUAL OPPORTUNITIES + DECLARATION ─── -->
+  <div class="form-section" data-section="8">
+    <div class="section-header">
+      <div class="section-number">8</div>
+      <h2>Equal Opportunities &amp; Declaration</h2>
+    </div>
+    <div class="section-body">
+      <div class="sub-heading">Equal Opportunities Monitoring</div>
+      <div class="eo-notice">
+        We are an equal opportunity employer. The aim of our policy is to ensure that no job applicant or employee receives less favourable treatment on the grounds of race, colour, creed, nationality, ethnic or national origin, religious belief, political opinion or affiliation, sex, marital status, sexual orientation or disability. This information is used solely for statistical monitoring purposes.
+      </div>
+
+      <div class="form-group">
+        <label>Ethnic Origin</label>
+        <div class="eo-grid">
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="White"> White</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Black–Caribbean"> Black–Caribbean</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Black–African"> Black–African</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Black-Other"> Black-Other</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Indian"> Indian</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Pakistani"> Pakistani</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Bangladeshi"> Bangladeshi</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Chinese"> Chinese</label>
+          <label class="eo-option"><input type="radio" name="eoEthnicity" value="Other"> Other</label>
+        </div>
+      </div>
+
+      <div class="field-grid" style="margin-top:20px">
+        <div class="form-group">
+          <label>Gender</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="eoGender" value="Male"> Male</label>
+            <label class="radio-option"><input type="radio" name="eoGender" value="Female"> Female</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Age Group</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="eoAge" value="18-25"> 18-25</label>
+            <label class="radio-option"><input type="radio" name="eoAge" value="26-30"> 26-30</label>
+            <label class="radio-option"><input type="radio" name="eoAge" value="30-40"> 30-40</label>
+            <label class="radio-option"><input type="radio" name="eoAge" value="40-50"> 40-50</label>
+            <label class="radio-option"><input type="radio" name="eoAge" value="Over 50"> Over 50</label>
+          </div>
+        </div>
+      </div>
+
+      <hr class="field-separator" style="margin-top:28px">
+      <div class="sub-heading">Declaration</div>
+      <div class="declaration-box">
+        <p>I confirm the above information is complete and correct and that any untrue or misleading information will give my employer the right to terminate any employment contract offered.</p>
+        <br>
+        <p>I confirm that I am physically and mentally fit for the purpose of the work which I would be required to perform and agree that the organisation reserves the right to require me to undergo a medical examination.</p>
+        <br>
+        <p>I understand that any job offered is subject to the following:</p>
+        <ul>
+          <li>Work permit (if applicable)</li>
+          <li>Receipt of two satisfactory references</li>
+          <li>DBS Check</li>
+        </ul>
+        <br>
+        <p>I agree to a Disclosure and Barring Service check (DBS) if I am successful.</p>
+      </div>
+
+      <div class="signature-area">
+        <div class="form-group">
+          <label for="signatureName">Full Name (as signature) <span class="required">*</span></label>
+          <input type="text" id="signatureName" name="signatureName" placeholder="Type your full name" required>
+        </div>
+        <div class="form-group">
+          <label for="signatureDate">Date <span class="required">*</span></label>
+          <input type="text" id="signatureDate" name="signatureDate" placeholder="dd/mm/yyyy" data-validate="date" required>
+        </div>
+      </div>
+
+      <label class="declaration-option" style="margin-top:20px">
+        <input type="checkbox" id="agreeDeclaration" name="agreeDeclaration" required>
+        <span>I have read and agree to the above declaration <span class="required">*</span></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ─── RETURN NOTICE ─── -->
+  <div class="return-notice">
+    <p><strong>Please return your completed application form to Human Resources,</strong><br>
+    Sinan Care Ltd<br>
+    The Pavilion Room 11 280 St Ann's Road, London N15 5BN<br>
+    Attention of HR Department or return it via e-mail to <a href="mailto:info@Sinancare.com">info@Sinancare.com</a></p>
+  </div>
+
+  <!-- ─── FOR OFFICE USE ONLY ─── -->
+  <div class="office-use-section">
+    <div class="office-use-title">For Office Use Only</div>
+    <table class="office-use-table">
+      <thead>
+        <tr>
+          <th>Date application received:</th>
+          <th>Interview date</th>
+          <th>Date of work permit checked &amp; copied by:</th>
+          <th>DBS Ref and date</th>
+          <th>References received 1 and 2</th>
+          <th>Employment start date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ═══  PART 2: PRE-EMPLOYMENT HEALTH DECLARATION  ═══════ -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <div class="part-divider">
+    <span class="part-divider-badge">Part 2</span>
+  </div>
+
+  <div class="part-banner">
+    <h2>Pre-Employment Health Declaration</h2>
+    <p>This form is issued to help identify any health problems or disability that may be relevant to your application.</p>
+    <div class="company-contact">
+      Sinan Care · 280 St Ann's Road, London N15 5BN · t: 020 38652502 · m: 07960631146 · e: info@sinancare.com · w: www.Sinancare.com
+    </div>
+  </div>
+
+  <!-- ─── HEALTH: Personal Details ─── -->
+  <div class="form-section" data-section="h1">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">H</div>
+      <h2>Personal Details</h2>
+    </div>
+    <div class="section-body">
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="hSurname">Surname <span class="required">*</span></label>
+          <input type="text" id="hSurname" name="hSurname">
+        </div>
+        <div class="form-group">
+          <label>Title</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="hTitle" value="Mr"> Mr</label>
+            <label class="radio-option"><input type="radio" name="hTitle" value="Mrs"> Mrs</label>
+            <label class="radio-option"><input type="radio" name="hTitle" value="Miss"> Miss</label>
+            <label class="radio-option"><input type="radio" name="hTitle" value="Ms"> Ms</label>
+            <label class="radio-option"><input type="radio" name="hTitle" value="Other"> Other</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="hForename">Forename <span class="required">*</span></label>
+          <input type="text" id="hForename" name="hForename">
+        </div>
+        <div class="form-group">
+          <label for="hDob">Date of Birth</label>
+          <input type="text" id="hDob" name="hDob" placeholder="dd/mm/yyyy" data-validate="date">
+        </div>
+        <div class="form-group">
+          <label for="hHomeTel">Home Tel</label>
+          <input type="tel" id="hHomeTel" name="hHomeTel" data-validate="phone">
+        </div>
+        <div class="form-group">
+          <label for="hMobile">Mobile</label>
+          <input type="tel" id="hMobile" name="hMobile" data-validate="phone">
+        </div>
+        <div class="form-group field-full">
+          <label for="hEmail">Email Address</label>
+          <input type="email" id="hEmail" name="hEmail" data-validate="email">
+        </div>
+        <div class="form-group field-full">
+          <label for="hHomeAddress">Home Address</label>
+          <input type="text" id="hHomeAddress" name="hHomeAddress">
+        </div>
+        <div class="form-group">
+          <label for="hPostCode">Post Code</label>
+          <input type="text" id="hPostCode" name="hPostCode">
+        </div>
+      </div>
+
+      <hr class="field-separator">
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="hJobApplied">Job Applied For</label>
+          <input type="text" id="hJobApplied" name="hJobApplied">
+        </div>
+        <div class="form-group">
+          <label for="hWorkplaceLocation">Workplace Location</label>
+          <input type="text" id="hWorkplaceLocation" name="hWorkplaceLocation">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── HEALTH: Questions 1–12 ─── -->
+  <div class="form-section" data-section="h2">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">H</div>
+      <h2>Health Questions</h2>
+    </div>
+    <div class="section-body">
+      <div class="important-notice">
+        <strong>'IMPORTANT'</strong>
+        <p>This form is issued to help identify any health problems or disability that may be relevant to your application.</p>
+      </div>
+
+      <table class="health-questions-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Have you had or do you suffer from any of the following</th>
+            <th>YES</th>
+            <th>NO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Any physical or mental condition that might affect your ability to do (or be made worse by doing) the job you have applied for?</td>
+            <td><input type="radio" name="hq1" value="Yes"></td>
+            <td><input type="radio" name="hq1" value="No"></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Any physical or mental health condition that might affect your safety or the safety of others at work?</td>
+            <td><input type="radio" name="hq2" value="Yes"></td>
+            <td><input type="radio" name="hq2" value="No"></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Any disabilities (as defined by the Disability Discrimination Act 2005)?</td>
+            <td><input type="radio" name="hq3" value="Yes"></td>
+            <td><input type="radio" name="hq3" value="No"></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Do you need any adjustments made to your workplace, workplace equipment or working practices?</td>
+            <td><input type="radio" name="hq4" value="Yes"></td>
+            <td><input type="radio" name="hq4" value="No"></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Have you been retired or had your work contract terminated due to ill health?</td>
+            <td><input type="radio" name="hq5" value="Yes"></td>
+            <td><input type="radio" name="hq5" value="No"></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Have you ever applied for or been awarded compensation for a workplace injury or illness?</td>
+            <td><input type="radio" name="hq6" value="Yes"></td>
+            <td><input type="radio" name="hq6" value="No"></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Any other condition or health problem that we should be made aware of or you want advice about?</td>
+            <td><input type="radio" name="hq7" value="Yes"></td>
+            <td><input type="radio" name="hq7" value="No"></td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>Have you ever seen a doctor in the last year for any kind of health problem?</td>
+            <td><input type="radio" name="hq8" value="Yes"></td>
+            <td><input type="radio" name="hq8" value="No"></td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>History of blackouts, fits, or epilepsy?</td>
+            <td><input type="radio" name="hq9" value="Yes"></td>
+            <td><input type="radio" name="hq9" value="No"></td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>Have you ever had a drug or alcohol dependency or misuse including prescription drugs or recreational drugs?</td>
+            <td><input type="radio" name="hq10" value="Yes"></td>
+            <td><input type="radio" name="hq10" value="No"></td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td>Do you have any health condition or injury caused or made worse by work?</td>
+            <td><input type="radio" name="hq11" value="Yes"></td>
+            <td><input type="radio" name="hq11" value="No"></td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td>Do you have any musculo-skeletal conditions that affect your ability to perform work tasks (including recurrent back pain, or hand, arm or shoulder problem) i.e. back, neck or joint problems?</td>
+            <td><input type="radio" name="hq12" value="Yes"></td>
+            <td><input type="radio" name="hq12" value="No"></td>
+          </tr>
+          <tr class="group-header">
+            <td>13</td>
+            <td colspan="3">Have you any difficulty with any of the following activities?</td>
+          </tr>
+          <tr class="sub-row">
+            <td>14</td>
+            <td>a) Standing</td>
+            <td><input type="radio" name="hq14" value="Yes"></td>
+            <td><input type="radio" name="hq14" value="No"></td>
+          </tr>
+          <tr class="sub-row">
+            <td>15</td>
+            <td>b) Walking</td>
+            <td><input type="radio" name="hq15" value="Yes"></td>
+            <td><input type="radio" name="hq15" value="No"></td>
+          </tr>
+          <tr class="sub-row">
+            <td>16</td>
+            <td>c) Sitting</td>
+            <td><input type="radio" name="hq16" value="Yes"></td>
+            <td><input type="radio" name="hq16" value="No"></td>
+          </tr>
+          <tr class="sub-row">
+            <td>17</td>
+            <td>d) Stair Climbing</td>
+            <td><input type="radio" name="hq17" value="Yes"></td>
+            <td><input type="radio" name="hq17" value="No"></td>
+          </tr>
+          <tr class="sub-row">
+            <td>18</td>
+            <td>e) Lifting</td>
+            <td><input type="radio" name="hq18" value="Yes"></td>
+            <td><input type="radio" name="hq18" value="No"></td>
+          </tr>
+          <tr class="sub-row">
+            <td>19</td>
+            <td>f) Driving</td>
+            <td><input type="radio" name="hq19" value="Yes"></td>
+            <td><input type="radio" name="hq19" value="No"></td>
+          </tr>
+          <tr class="sub-row">
+            <td>20</td>
+            <td>g) Kneeling, squatting, bending</td>
+            <td><input type="radio" name="hq20" value="Yes"></td>
+            <td><input type="radio" name="hq20" value="No"></td>
+          </tr>
+          <tr class="sub-row">
+            <td>21</td>
+            <td>h) Manual dexterity</td>
+            <td><input type="radio" name="hq21" value="Yes"></td>
+            <td><input type="radio" name="hq21" value="No"></td>
+          </tr>
+          <tr>
+            <td>22</td>
+            <td>Have you had any serious operations or illness?</td>
+            <td><input type="radio" name="hq22" value="Yes"></td>
+            <td><input type="radio" name="hq22" value="No"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── HEALTH: Vaccinations ─── -->
+  <div class="form-section" data-section="h3">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">H</div>
+      <h2>Vaccinations / Immunizations / Tests</h2>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Have you ever been Vaccinated, Immunized or Tested for/against any of the following?</p>
+
+      <table class="health-questions-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Vaccination / Test</th>
+            <th>YES</th>
+            <th>NO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>23</td>
+            <td>Tuberculosis including BCG, Heaf, Mantoux or Tine?</td>
+            <td><input type="radio" name="hq23" value="Yes"></td>
+            <td><input type="radio" name="hq23" value="No"></td>
+          </tr>
+          <tr>
+            <td>24</td>
+            <td>Rubella (German Measles)</td>
+            <td><input type="radio" name="hq24" value="Yes"></td>
+            <td><input type="radio" name="hq24" value="No"></td>
+          </tr>
+          <tr>
+            <td>25</td>
+            <td>Poliomyelitis</td>
+            <td><input type="radio" name="hq25" value="Yes"></td>
+            <td><input type="radio" name="hq25" value="No"></td>
+          </tr>
+          <tr>
+            <td>26</td>
+            <td>Hepatitis B</td>
+            <td><input type="radio" name="hq26" value="Yes"></td>
+            <td><input type="radio" name="hq26" value="No"></td>
+          </tr>
+          <tr>
+            <td>27</td>
+            <td>Hepatitis B Antibodies (Date and Result)</td>
+            <td><input type="radio" name="hq27" value="Yes"></td>
+            <td><input type="radio" name="hq27" value="No"></td>
+          </tr>
+          <tr>
+            <td>28</td>
+            <td>HIV</td>
+            <td><input type="radio" name="hq28" value="Yes"></td>
+            <td><input type="radio" name="hq28" value="No"></td>
+          </tr>
+          <tr>
+            <td>29</td>
+            <td>Tetanus</td>
+            <td><input type="radio" name="hq29" value="Yes"></td>
+            <td><input type="radio" name="hq29" value="No"></td>
+          </tr>
+          <tr>
+            <td>30</td>
+            <td>Typhoid</td>
+            <td><input type="radio" name="hq30" value="Yes"></td>
+            <td><input type="radio" name="hq30" value="No"></td>
+          </tr>
+          <tr>
+            <td>31</td>
+            <td>Any Other</td>
+            <td><input type="radio" name="hq31" value="Yes"></td>
+            <td><input type="radio" name="hq31" value="No"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr class="field-separator">
+      <div class="sub-heading">Name of Your GP (Doctor)</div>
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="hGpName">GP Name</label>
+          <input type="text" id="hGpName" name="hGpName">
+        </div>
+        <div class="form-group">
+          <label for="hGpPhone">Phone</label>
+          <input type="tel" id="hGpPhone" name="hGpPhone" data-validate="phone">
+        </div>
+        <div class="form-group field-full">
+          <label for="hGpAddress">Address</label>
+          <input type="text" id="hGpAddress" name="hGpAddress">
+        </div>
+        <div class="form-group">
+          <label for="hGpPostcode">Postcode</label>
+          <input type="text" id="hGpPostcode" name="hGpPostcode">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── HEALTH: Details of Yes Answers ─── -->
+  <div class="form-section" data-section="h4">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">H</div>
+      <h2>Details of &ldquo;Yes&rdquo; Answers</h2>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">In this section please give details of the questions to which you have answered <strong>Yes</strong>.</p>
+
+      <div class="details-grid">
+        <div class="dg-header">Question #</div>
+        <div class="dg-header">Details</div>
+        <div class="dg-row-num">1</div><div class="dg-row-input"><textarea name="hd1" rows="1"></textarea></div>
+        <div class="dg-row-num">2</div><div class="dg-row-input"><textarea name="hd2" rows="1"></textarea></div>
+        <div class="dg-row-num">3</div><div class="dg-row-input"><textarea name="hd3" rows="1"></textarea></div>
+        <div class="dg-row-num">4</div><div class="dg-row-input"><textarea name="hd4" rows="1"></textarea></div>
+        <div class="dg-row-num">5</div><div class="dg-row-input"><textarea name="hd5" rows="1"></textarea></div>
+        <div class="dg-row-num">6</div><div class="dg-row-input"><textarea name="hd6" rows="1"></textarea></div>
+        <div class="dg-row-num">7</div><div class="dg-row-input"><textarea name="hd7" rows="1"></textarea></div>
+        <div class="dg-row-num">8</div><div class="dg-row-input"><textarea name="hd8" rows="1"></textarea></div>
+        <div class="dg-row-num">9</div><div class="dg-row-input"><textarea name="hd9" rows="1"></textarea></div>
+        <div class="dg-row-num">10</div><div class="dg-row-input"><textarea name="hd10" rows="1"></textarea></div>
+        <div class="dg-row-num">11</div><div class="dg-row-input"><textarea name="hd11" rows="1"></textarea></div>
+        <div class="dg-row-num">12</div><div class="dg-row-input"><textarea name="hd12" rows="1"></textarea></div>
+        <div class="dg-row-num">13</div><div class="dg-row-input"><textarea name="hd13" rows="1"></textarea></div>
+        <div class="dg-row-num">14</div><div class="dg-row-input"><textarea name="hd14" rows="1"></textarea></div>
+        <div class="dg-row-num">15</div><div class="dg-row-input"><textarea name="hd15" rows="1"></textarea></div>
+        <div class="dg-row-num">16</div><div class="dg-row-input"><textarea name="hd16" rows="1"></textarea></div>
+        <div class="dg-row-num">17</div><div class="dg-row-input"><textarea name="hd17" rows="1"></textarea></div>
+        <div class="dg-row-num">18</div><div class="dg-row-input"><textarea name="hd18" rows="1"></textarea></div>
+        <div class="dg-row-num">19</div><div class="dg-row-input"><textarea name="hd19" rows="1"></textarea></div>
+        <div class="dg-row-num">20</div><div class="dg-row-input"><textarea name="hd20" rows="1"></textarea></div>
+        <div class="dg-row-num">21</div><div class="dg-row-input"><textarea name="hd21" rows="1"></textarea></div>
+        <div class="dg-row-num">22</div><div class="dg-row-input"><textarea name="hd22" rows="1"></textarea></div>
+        <div class="dg-row-num">23</div><div class="dg-row-input"><textarea name="hd23" rows="1"></textarea></div>
+        <div class="dg-row-num">24</div><div class="dg-row-input"><textarea name="hd24" rows="1"></textarea></div>
+        <div class="dg-row-num">25</div><div class="dg-row-input"><textarea name="hd25" rows="1"></textarea></div>
+        <div class="dg-row-num">26</div><div class="dg-row-input"><textarea name="hd26" rows="1"></textarea></div>
+        <div class="dg-row-num">27</div><div class="dg-row-input"><textarea name="hd27" rows="1"></textarea></div>
+        <div class="dg-row-num">28</div><div class="dg-row-input"><textarea name="hd28" rows="1"></textarea></div>
+        <div class="dg-row-num">29</div><div class="dg-row-input"><textarea name="hd29" rows="1"></textarea></div>
+        <div class="dg-row-num">30</div><div class="dg-row-input"><textarea name="hd30" rows="1"></textarea></div>
+        <div class="dg-row-num">31</div><div class="dg-row-input"><textarea name="hd31" rows="1"></textarea></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── HEALTH: Confirmation & Signature ─── -->
+  <div class="form-section" data-section="h5">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">H</div>
+      <h2>Health Declaration Confirmation</h2>
+    </div>
+    <div class="section-body">
+      <div class="declaration-box">
+        <p>I (print name) confirm that to the best of my knowledge, the answers given above are true and correct. I also confirm that I have read and understand the guidance notes before making the above declaration and understand that failure to disclose any relevant information may result in serious action including dismissal.</p>
+      </div>
+
+      <div class="signature-area">
+        <div class="form-group">
+          <label for="hSignatureName">Full Name (print) <span class="required">*</span></label>
+          <input type="text" id="hSignatureName" name="hSignatureName">
+        </div>
+        <div class="form-group">
+          <label for="hSignatureDate">Date <span class="required">*</span></label>
+          <input type="text" id="hSignatureDate" name="hSignatureDate" placeholder="dd/mm/yyyy" data-validate="date">
+        </div>
+      </div>
+
+      <div class="eo-notice" style="margin-top:20px;background:var(--gray-50);border-color:var(--gray-200)">
+        <p style="font-size:12px;color:var(--gray-500)">If your application is successful, this document will be held in secure storage in your personnel file. If your application is unsuccessful, it will be held in secure storage for 6 months then destroyed.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SUBMIT ─── -->
+  <div class="submit-section">
+    <button type="submit" class="submit-btn" id="submitBtn">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Submit Application
+    </button>
+    <p style="font-size:12px;color:var(--gray-400);margin-top:12px;">Your completed form will be generated as a PDF for download and sent to Sinan Care HR.</p>
+  </div>
+
+</form>
+</main>
+</div><!-- end tab1Content -->
+
+<!-- ══════════ TAB 2: REFERENCE FORM ══════════ -->
+<div id="tab2Content" class="tab-content">
+
+<!-- Reference Progress Bar -->
+<div class="ref-progress-bar-container">
+  <div class="ref-progress-inner">
+    <div class="ref-progress-steps">
+      <div class="ref-progress-step active" data-refsec="r1"></div>
+      <div class="ref-progress-step" data-refsec="r2"></div>
+      <div class="ref-progress-step" data-refsec="r3"></div>
+      <div class="ref-progress-step" data-refsec="r4"></div>
+      <div class="ref-progress-step" data-refsec="r5"></div>
+    </div>
+    <div class="progress-label">Section <span id="refCurrentSection">1</span> of 5</div>
+  </div>
+</div>
+
+<main class="main-container">
+
+  <!-- Part 3 Banner -->
+  <div class="part-divider" style="margin-top:24px">
+    <span class="part-divider-badge" style="background:var(--coral)">Part 3</span>
+  </div>
+
+  <div class="part-banner" style="margin-top:16px;background:linear-gradient(135deg,#7a3a1e,var(--coral))">
+    <h2>Reference Request Form</h2>
+    <p>The person named below has applied for the stated post within our organisation and has given your name as a referee. Please answer all relevant questions, sign and date the form, and return it to us as soon as possible.</p>
+    <div class="company-contact">
+      Sinan Care · Room 11, The Pavilion, 280 St Ann's Road, London N15 5BN · Info@sinancare.com
+    </div>
+  </div>
+
+<form id="referenceForm" novalidate>
+
+  <!-- ─── REF SECTION 1: Applicant & General Info ─── -->
+  <div class="form-section" data-refsec="r1" style="margin-top:24px">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">1</div>
+      <h2>Applicant &amp; General Information</h2>
+    </div>
+    <div class="section-body">
+      <div class="sub-heading">Applicant Information</div>
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="refApplicantName">Name of Applicant <span class="required">*</span></label>
+          <input type="text" id="refApplicantName" name="refApplicantName" required>
+        </div>
+        <div class="form-group">
+          <label for="refPostApplied">Post Applied For <span class="required">*</span></label>
+          <input type="text" id="refPostApplied" name="refPostApplied" required>
+        </div>
+        <div class="form-group field-full">
+          <label for="refOrganisation">Organisation</label>
+          <input type="text" id="refOrganisation" name="refOrganisation" value="Sinan Care Ltd" readonly style="background:var(--gray-50);color:var(--gray-500)">
+        </div>
+      </div>
+
+      <hr class="field-separator">
+      <div class="sub-heading">General Information (Referee)</div>
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="refRefereeName">Referee's Name <span class="required">*</span></label>
+          <input type="text" id="refRefereeName" name="refRefereeName" required>
+        </div>
+        <div class="form-group">
+          <label for="refRefereePosition">Position <span class="required">*</span></label>
+          <input type="text" id="refRefereePosition" name="refRefereePosition" required>
+        </div>
+        <div class="form-group field-full">
+          <label for="refRefereeAddress">Address</label>
+          <input type="text" id="refRefereeAddress" name="refRefereeAddress">
+        </div>
+        <div class="form-group">
+          <label for="refRefereeTel">Telephone No.</label>
+          <input type="tel" id="refRefereeTel" name="refRefereeTel" data-validate="phone">
+        </div>
+        <div class="form-group">
+          <label for="refCapacity">In what capacity do you know the applicant?</label>
+          <input type="text" id="refCapacity" name="refCapacity">
+        </div>
+        <div class="form-group field-full">
+          <label for="refHowLong">How long have you known the applicant?</label>
+          <input type="text" id="refHowLong" name="refHowLong">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REF SECTION 2: Employment Information ─── -->
+  <div class="form-section" data-refsec="r2">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">2</div>
+      <h2>Employment Information</h2>
+    </div>
+    <div class="section-body">
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="refDatesEmployment">Dates of Employment</label>
+          <input type="text" id="refDatesEmployment" name="refDatesEmployment" placeholder="e.g. Jan 2019 – Dec 2023">
+        </div>
+        <div class="form-group">
+          <label for="refCapacityEmployed">Capacity in Which Employed</label>
+          <input type="text" id="refCapacityEmployed" name="refCapacityEmployed">
+        </div>
+        <div class="form-group field-full">
+          <label for="refMainDuties">Main Duties</label>
+          <textarea id="refMainDuties" name="refMainDuties" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="refSalary">Salary</label>
+          <input type="text" id="refSalary" name="refSalary">
+        </div>
+        <div class="form-group">
+          <label for="refReasonLeaving">Reason for Leaving</label>
+          <input type="text" id="refReasonLeaving" name="refReasonLeaving">
+        </div>
+        <div class="form-group field-full">
+          <label for="refSickDays">Number of Days Absent Through Sickness/Injury in the Last Year</label>
+          <input type="text" id="refSickDays" name="refSickDays">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REF SECTION 3: Assessment of Performance ─── -->
+  <div class="form-section" data-refsec="r3">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">3</div>
+      <h2>Assessment of Performance</h2>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Please rate the person on the following:</p>
+
+      <table class="rating-table">
+        <thead>
+          <tr>
+            <th>Attribute</th>
+            <th>Poor</th>
+            <th>Average</th>
+            <th>Good</th>
+            <th>Excellent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Teamwork</td>
+            <td><input type="radio" name="rateTeamwork" value="Poor"></td>
+            <td><input type="radio" name="rateTeamwork" value="Average"></td>
+            <td><input type="radio" name="rateTeamwork" value="Good"></td>
+            <td><input type="radio" name="rateTeamwork" value="Excellent"></td>
+          </tr>
+          <tr>
+            <td>Honesty</td>
+            <td><input type="radio" name="rateHonesty" value="Poor"></td>
+            <td><input type="radio" name="rateHonesty" value="Average"></td>
+            <td><input type="radio" name="rateHonesty" value="Good"></td>
+            <td><input type="radio" name="rateHonesty" value="Excellent"></td>
+          </tr>
+          <tr>
+            <td>Punctuality</td>
+            <td><input type="radio" name="ratePunctuality" value="Poor"></td>
+            <td><input type="radio" name="ratePunctuality" value="Average"></td>
+            <td><input type="radio" name="ratePunctuality" value="Good"></td>
+            <td><input type="radio" name="ratePunctuality" value="Excellent"></td>
+          </tr>
+          <tr>
+            <td>Reliability</td>
+            <td><input type="radio" name="rateReliability" value="Poor"></td>
+            <td><input type="radio" name="rateReliability" value="Average"></td>
+            <td><input type="radio" name="rateReliability" value="Good"></td>
+            <td><input type="radio" name="rateReliability" value="Excellent"></td>
+          </tr>
+          <tr>
+            <td>Attitude</td>
+            <td><input type="radio" name="rateAttitude" value="Poor"></td>
+            <td><input type="radio" name="rateAttitude" value="Average"></td>
+            <td><input type="radio" name="rateAttitude" value="Good"></td>
+            <td><input type="radio" name="rateAttitude" value="Excellent"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── REF SECTION 4: Child Protection & Other Information ─── -->
+  <div class="form-section" data-refsec="r4">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">4</div>
+      <h2>Child Protection &amp; Other Information</h2>
+    </div>
+    <div class="section-body">
+      <div class="sub-heading">Child Protection</div>
+      <div class="child-protection-box">
+        <strong>This post involves substantial access to children/vulnerable adults.</strong><br>
+        Is there any reason at all to be concerned about this applicant being in contact with children/vulnerable adults?
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px">
+        <div class="radio-group">
+          <label class="radio-option"><input type="radio" name="refChildProtection" value="Yes"> Yes</label>
+          <label class="radio-option"><input type="radio" name="refChildProtection" value="No"> No</label>
+        </div>
+        <p style="font-size:12px;color:var(--gray-400);margin-top:6px">If 'Yes', we may contact you in confidence.</p>
+      </div>
+
+      <hr class="field-separator">
+      <div class="sub-heading">Other Information</div>
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label for="refAbilityComment">Please comment on the ability of the applicant to carry out the duties of this post, with reference to the enclosed Job Description and Person Specification</label>
+        <textarea id="refAbilityComment" name="refAbilityComment" rows="4"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px">
+        <label for="refReasonNotAppoint">In your opinion, is there any reason why the applicant should not be appointed to this post?</label>
+        <textarea id="refReasonNotAppoint" name="refReasonNotAppoint" rows="3"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="refFurtherInfo">Do you have any further information or comments which you would wish to offer about the applicant, bearing in mind the post for which they have applied?</label>
+        <textarea id="refFurtherInfo" name="refFurtherInfo" rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REF SECTION 5: Data Protection & Signature ─── -->
+  <div class="form-section" data-refsec="r5">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--coral)">5</div>
+      <h2>Data Protection &amp; Declaration</h2>
+    </div>
+    <div class="section-body">
+      <div class="data-protection-box">
+        <p>This information is being collected by Sinan Care Ltd for the purpose of recruitment and selection. If you are giving a reference on behalf of a present or previous employer, the subject will be entitled to see it.</p>
+        <p>If the applicant is successful the information will be held on file for the duration of their employment. If the applicant is unsuccessful the information will be held on file for a maximum of twelve months and then destroyed.</p>
+      </div>
+
+      <div class="declaration-box" style="margin-bottom:24px">
+        <p style="font-size:12.5px">This reference is given on the understanding that any legal responsibility or liability for accuracy or otherwise of any statement herein is hereby excluded in respect of the author of the reference, his/her employer, the recipient of the reference and the subject of it.</p>
+      </div>
+
+      <div class="signature-area">
+        <div class="form-group">
+          <label for="refSignatureName">Full Name (as signature) <span class="required">*</span></label>
+          <input type="text" id="refSignatureName" name="refSignatureName" placeholder="Type your full name" required>
+        </div>
+        <div class="form-group">
+          <label for="refSignatureDate">Date <span class="required">*</span></label>
+          <input type="text" id="refSignatureDate" name="refSignatureDate" placeholder="dd/mm/yyyy" data-validate="date" required>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── REFERENCE SUBMIT ─── -->
+  <div class="submit-section">
+    <button type="submit" class="submit-btn" id="refSubmitBtn" style="background:linear-gradient(135deg,#7a3a1e,var(--coral))">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Submit Reference
+    </button>
+    <p style="font-size:12px;color:var(--gray-400);margin-top:12px;">Your completed reference will be generated as a PDF for download and sent to Sinan Care HR.</p>
+  </div>
+
+</form>
+</main>
+</div><!-- end tab2Content -->
+
+<!-- ══════════ SUCCESS MODAL (Application) ══════════ -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal-content">
+    <div class="modal-icon">
+      <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <h3>Application Submitted!</h3>
+    <p>Your application has been generated as a PDF. You can download it below and it is ready to be sent to Sinan Care HR at <strong>Info@sinancare.com</strong>.</p>
+    <div class="modal-actions">
+      <button class="btn-download" id="downloadPdfBtn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Download PDF
+      </button>
+      <button class="btn-email" id="emailPdfBtn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Send via Email
+      </button>
+      <button class="btn-close-modal" onclick="document.getElementById('successModal').classList.remove('visible')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SUCCESS MODAL (Reference) ══════════ -->
+<div class="modal-overlay" id="refSuccessModal">
+  <div class="modal-content">
+    <div class="modal-icon" style="background:#fdf2e9">
+      <svg fill="none" stroke="var(--coral)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <h3>Reference Submitted!</h3>
+    <p>Your reference has been generated as a PDF. You can download it below and it is ready to be sent to Sinan Care HR at <strong>Info@sinancare.com</strong>.</p>
+    <div class="modal-actions">
+      <button class="btn-download" id="refDownloadPdfBtn" style="background:var(--coral)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Download PDF
+      </button>
+      <button class="btn-email" id="refEmailPdfBtn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Send via Email
+      </button>
+      <button class="btn-close-modal" onclick="document.getElementById('refSuccessModal').classList.remove('visible')">Close</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  Sinan Care Ltd &middot; The Pavilion, Room 11, 280 St Ann's Road, London N15 5BN &middot; <a href="mailto:info@Sinancare.com">info@Sinancare.com</a>
+</footer>
+
+<script>
+// ══════════ VALIDATION UTILITIES ══════════
+const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+const phoneRegex = /^[\d\s\+\(\)\-]{7,20}$/;
+const dateRegex = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/;
+
+function validateField(input) {
+  const type = input.dataset.validate;
+  const val = input.value.trim();
+  let errorMsg = input.nextElementSibling;
+  if (!errorMsg || !errorMsg.classList.contains('field-error-msg')) {
+    errorMsg = document.createElement('div');
+    errorMsg.className = 'field-error-msg';
+    input.parentNode.insertBefore(errorMsg, input.nextSibling);
+  }
+
+  // Skip empty non-required fields
+  if (!val && !input.required) {
+    input.classList.remove('field-error');
+    errorMsg.classList.remove('visible');
+    return true;
+  }
+
+  let valid = true;
+  let msg = '';
+
+  if (type === 'email' && val) {
+    valid = emailRegex.test(val);
+    msg = 'Please enter a valid email (e.g. name@provider.com)';
+  } else if (type === 'phone' && val) {
+    valid = phoneRegex.test(val) && !/[a-zA-Z]/.test(val);
+    msg = 'Please enter a valid phone number (digits only, no letters)';
+  } else if (type === 'date' && val) {
+    valid = dateRegex.test(val);
+    msg = 'Please enter a valid date in dd/mm/yyyy format';
+    if (valid) {
+      const [d, m, y] = val.split('/').map(Number);
+      const date = new Date(y, m - 1, d);
+      if (date.getDate() !== d || date.getMonth() !== m - 1 || date.getFullYear() !== y) {
+        valid = false;
+        msg = 'This date does not exist. Please check day/month.';
+      }
+    }
+  }
+
+  if (!valid) {
+    input.classList.add('field-error');
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('visible');
+  } else {
+    input.classList.remove('field-error');
+    errorMsg.classList.remove('visible');
+  }
+  return valid;
+}
+
+function validateForm(form) {
+  let valid = true;
+  let firstInvalid = null;
+
+  // Check required fields
+  form.querySelectorAll('[required]').forEach(el => {
+    if (!el.value.trim()) {
+      el.classList.add('field-error');
+      valid = false;
+      if (!firstInvalid) firstInvalid = el;
+    } else {
+      el.classList.remove('field-error');
+    }
+  });
+
+  // Check all data-validate fields
+  form.querySelectorAll('[data-validate]').forEach(input => {
+    if (!validateField(input)) {
+      valid = false;
+      if (!firstInvalid) firstInvalid = input;
+    }
+  });
+
+  if (!valid && firstInvalid) {
+    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    firstInvalid.focus();
+  }
+
+  return valid;
+}
+
+// Auto-format date fields (dd/mm/yyyy) as user types
+document.addEventListener('input', function(e) {
+  if (e.target.dataset.validate === 'date') {
+    let v = e.target.value.replace(/[^\d\/]/g, '');
+    // Auto-insert slashes
+    const digits = v.replace(/\//g, '');
+    if (digits.length >= 2 && v.indexOf('/') === -1) {
+      v = digits.slice(0, 2) + '/' + digits.slice(2);
+    }
+    if (digits.length >= 4 && (v.match(/\//g) || []).length < 2) {
+      const parts = v.split('/');
+      if (parts.length === 2 && parts[1].length >= 2) {
+        v = parts[0] + '/' + parts[1].slice(0, 2) + '/' + parts[1].slice(2);
+      }
+    }
+    if (v.length > 10) v = v.slice(0, 10);
+    e.target.value = v;
+  }
+});
+
+// Prevent letters in phone fields
+document.addEventListener('input', function(e) {
+  if (e.target.dataset.validate === 'phone') {
+    e.target.value = e.target.value.replace(/[a-zA-Z]/g, '');
+  }
+});
+
+// Live validation on blur
+document.addEventListener('blur', function(e) {
+  if (e.target.dataset && e.target.dataset.validate) {
+    validateField(e.target);
+  }
+}, true);
+// ══════════ TOGGLE CONDITIONAL FIELDS ══════════
+function toggleField(fieldId, show) {
+  const group = document.getElementById(fieldId + 'Group');
+  if (group) group.style.display = show ? '' : 'none';
+}
+
+// ══════════ DYNAMIC ENTRY MANAGEMENT ══════════
+let academicCount = 1, otherQualCount = 1, employmentCount = 1;
+
+function addAcademicEntry() {
+  academicCount++;
+  const container = document.getElementById('academicEntries');
+  const card = document.createElement('div');
+  card.className = 'entry-card academic-entry';
+  card.innerHTML = `
+    <div class="entry-label">Qualification ${academicCount}</div>
+    <button type="button" class="remove-entry" onclick="this.parentElement.remove()" title="Remove">&times;</button>
+    <div class="field-grid">
+      <div class="form-group"><label>From (Date)</label><input type="text" name="acadFrom[]" placeholder="e.g. Sep 2010"></div>
+      <div class="form-group"><label>To (Date)</label><input type="text" name="acadTo[]" placeholder="e.g. Jun 2014"></div>
+      <div class="form-group"><label>School/College Attended</label><input type="text" name="acadSchool[]"></div>
+      <div class="form-group"><label>Qualifications Obtained</label><input type="text" name="acadQual[]"></div>
+    </div>`;
+  container.appendChild(card);
+}
+
+function addOtherQualEntry() {
+  otherQualCount++;
+  const container = document.getElementById('otherQualEntries');
+  const card = document.createElement('div');
+  card.className = 'entry-card other-qual-entry';
+  card.innerHTML = `
+    <div class="entry-label">Entry ${otherQualCount}</div>
+    <button type="button" class="remove-entry" onclick="this.parentElement.remove()" title="Remove">&times;</button>
+    <div class="field-grid">
+      <div class="form-group field-full"><label>Qualification / Course / Award</label><input type="text" name="otherQual[]"></div>
+    </div>`;
+  container.appendChild(card);
+}
+
+function addEmploymentEntry() {
+  employmentCount++;
+  const container = document.getElementById('employmentEntries');
+  const card = document.createElement('div');
+  card.className = 'entry-card employment-entry';
+  card.innerHTML = `
+    <div class="entry-label">Employment ${employmentCount}</div>
+    <button type="button" class="remove-entry" onclick="this.parentElement.remove()" title="Remove">&times;</button>
+    <div class="field-grid">
+      <div class="form-group"><label>From (Date)</label><input type="text" name="empFrom[]" placeholder="e.g. Jan 2020"></div>
+      <div class="form-group"><label>To (Date)</label><input type="text" name="empTo[]" placeholder="e.g. Present"></div>
+      <div class="form-group field-full"><label>Name &amp; Address of Employer</label><input type="text" name="empEmployer[]"></div>
+      <div class="form-group field-full"><label>Job Title &amp; Key Responsibilities</label><textarea name="empResponsibilities[]" rows="2"></textarea></div>
+      <div class="form-group field-full"><label>Reason(s) for Leaving</label><input type="text" name="empReason[]"></div>
+    </div>`;
+  container.appendChild(card);
+}
+
+// ══════════ PROGRESS BAR ══════════
+function updateProgress() {
+  const sections = document.querySelectorAll('.form-section');
+  const steps = document.querySelectorAll('.progress-step');
+  const scrollPos = window.scrollY + 200;
+  let activeIdx = 0;
+
+  sections.forEach((s, i) => {
+    if (s.offsetTop <= scrollPos) activeIdx = i;
+  });
+
+  steps.forEach((step, i) => {
+    step.classList.remove('active', 'completed');
+    if (i < activeIdx) step.classList.add('completed');
+    else if (i === activeIdx) step.classList.add('active');
+  });
+
+  document.getElementById('currentSection').textContent = activeIdx + 1;
+}
+
+window.addEventListener('scroll', updateProgress);
+window.addEventListener('load', updateProgress);
+
+// ══════════ COLLECT FORM DATA ══════════
+function collectFormData() {
+  const f = document.getElementById('applicationForm');
+  const val = (id) => (document.getElementById(id)?.value || '').trim();
+  const radio = (name) => { const el = f.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; };
+  const checked = (name) => { const el = f.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; };
+
+  // Collect array fields
+  const acadFroms = [...f.querySelectorAll('input[name="acadFrom[]"]')].map(e => e.value);
+  const acadTos = [...f.querySelectorAll('input[name="acadTo[]"]')].map(e => e.value);
+  const acadSchools = [...f.querySelectorAll('input[name="acadSchool[]"]')].map(e => e.value);
+  const acadQuals = [...f.querySelectorAll('input[name="acadQual[]"]')].map(e => e.value);
+
+  const otherQuals = [...f.querySelectorAll('input[name="otherQual[]"]')].map(e => e.value);
+
+  const empFroms = [...f.querySelectorAll('input[name="empFrom[]"]')].map(e => e.value);
+  const empTos = [...f.querySelectorAll('input[name="empTo[]"]')].map(e => e.value);
+  const empEmployers = [...f.querySelectorAll('input[name="empEmployer[]"]')].map(e => e.value);
+  const empResps = [...f.querySelectorAll('textarea[name="empResponsibilities[]"]')].map(e => e.value);
+  const empReasons = [...f.querySelectorAll('input[name="empReason[]"]')].map(e => e.value);
+
+  const skills = [...f.querySelectorAll('input[name="skills[]"]:checked')].map(e => e.value);
+
+  return {
+    title: radio('title'),
+    firstName: val('firstName'),
+    middleNames: val('middleNames'),
+    surname: val('surname'),
+    address: val('address'),
+    postCode: val('postCode'),
+    dob: val('dob'),
+    niNumber: val('niNumber'),
+    nationality: val('nationality'),
+    ethnicity: val('ethnicity'),
+    religion: val('religion'),
+    landline: val('landline'),
+    mobile: val('mobile'),
+    email: val('email'),
+    languages: val('languages'),
+    nokName: val('nokName'),
+    nokAddress: val('nokAddress'),
+    nokTelephone: val('nokTelephone'),
+    positionApplied: val('positionApplied'),
+    // Medical
+    disability: radio('disability'),
+    disabilityDetails: val('disabilityDetails'),
+    registeredDisabled: radio('registeredDisabled'),
+    regDisabledNo: val('regDisabledNo'),
+    medicalConditions: val('medicalConditions'),
+    currentMedication: val('currentMedication'),
+    // Education
+    academic: acadFroms.map((_, i) => ({ from: acadFroms[i], to: acadTos[i], school: acadSchools[i], qual: acadQuals[i] })),
+    otherQuals,
+    // Employment
+    employment: empFroms.map((_, i) => ({ from: empFroms[i], to: empTos[i], employer: empEmployers[i], responsibilities: empResps[i], reason: empReasons[i] })),
+    otherEmployment: radio('otherEmployment'),
+    otherEmploymentDetails: val('otherEmploymentDetails'),
+    skills,
+    // Offenders
+    criminalRecord: f.querySelector('input[name="criminalRecord"]')?.checked ? 'Yes' : 'No',
+    noCriminalRecord: f.querySelector('input[name="noCriminalRecord"]')?.checked ? 'Yes' : 'No',
+    futureDisclosure: f.querySelector('input[name="futureDisclosure"]')?.checked ? 'Yes' : 'No',
+    addrHistory1: val('addrHistory1'), addrDates1: val('addrDates1'),
+    addrHistory2: val('addrHistory2'), addrDates2: val('addrDates2'),
+    addrHistory3: val('addrHistory3'), addrDates3: val('addrDates3'),
+    // Leisure
+    leisureInterests: val('leisureInterests'),
+    // References
+    ref1Name: val('ref1Name'), ref1Title: val('ref1Title'), ref1Company: val('ref1Company'),
+    ref1Address: val('ref1Address'), ref1Tel: val('ref1Tel'), ref1Email: val('ref1Email'),
+    ref2Name: val('ref2Name'), ref2Title: val('ref2Title'), ref2Company: val('ref2Company'),
+    ref2Address: val('ref2Address'), ref2Tel: val('ref2Tel'), ref2Email: val('ref2Email'),
+    // Equal Opportunities
+    eoEthnicity: radio('eoEthnicity'),
+    eoGender: radio('eoGender'),
+    eoAge: radio('eoAge'),
+    // Declaration
+    signatureName: val('signatureName'),
+    signatureDate: val('signatureDate'),
+    // ── Health Declaration ──
+    hSurname: val('hSurname'),
+    hTitle: radio('hTitle'),
+    hForename: val('hForename'),
+    hDob: val('hDob'),
+    hHomeTel: val('hHomeTel'),
+    hMobile: val('hMobile'),
+    hEmail: val('hEmail'),
+    hHomeAddress: val('hHomeAddress'),
+    hPostCode: val('hPostCode'),
+    hJobApplied: val('hJobApplied'),
+    hWorkplaceLocation: val('hWorkplaceLocation'),
+    // Health questions 1-12, 14-22
+    hQuestions: (() => {
+      const qs = {};
+      const nums = [1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
+      nums.forEach(n => { qs[n] = radio('hq' + n); });
+      return qs;
+    })(),
+    // Details for yes answers
+    hDetails: (() => {
+      const ds = {};
+      for (let i = 1; i <= 31; i++) {
+        const ta = f.querySelector(`textarea[name="hd${i}"]`);
+        ds[i] = ta ? ta.value.trim() : '';
+      }
+      return ds;
+    })(),
+    // GP
+    hGpName: val('hGpName'),
+    hGpPhone: val('hGpPhone'),
+    hGpAddress: val('hGpAddress'),
+    hGpPostcode: val('hGpPostcode'),
+    // Health signature
+    hSignatureName: val('hSignatureName'),
+    hSignatureDate: val('hSignatureDate'),
+  };
+}
+
+// ══════════ GENERATE PDF ══════════
+let generatedPdfBlob = null;
+
+function generatePDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageW = 210, margin = 18;
+  const contentW = pageW - margin * 2;
+  let y = 16;
+
+  const TEAL = [13, 59, 63];
+  const CORAL = [224, 116, 86];
+  const GRAY = [75, 85, 99];
+  const DARK = [31, 41, 55];
+  const LIGHT_BG = [238, 249, 250];
+
+  function checkPage(needed) {
+    if (y + needed > 278) { doc.addPage(); y = 16; }
+  }
+
+  function sectionTitle(text) {
+    checkPage(16);
+    doc.setFillColor(...TEAL);
+    doc.roundedRect(margin, y, contentW, 10, 1.5, 1.5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text(text, margin + 4, y + 7);
+    y += 14;
+  }
+
+  function fieldRow(label, value) {
+    checkPage(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(label + ':', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    const labelW = doc.getTextWidth(label + ': ');
+    const lines = doc.splitTextToSize(value || '—', contentW - labelW - 2);
+    doc.text(lines, margin + labelW + 1, y);
+    y += Math.max(lines.length * 4.5, 5.5);
+  }
+
+  function fieldPair(l1, v1, l2, v2) {
+    checkPage(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(l1 + ':', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    const lw1 = doc.getTextWidth(l1 + ': ');
+    doc.text(v1 || '—', margin + lw1 + 1, y);
+
+    const midX = margin + contentW / 2;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(l2 + ':', midX, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    const lw2 = doc.getTextWidth(l2 + ': ');
+    doc.text(v2 || '—', midX + lw2 + 1, y);
+    y += 5.5;
+  }
+
+  // ── Header ──
+  doc.setFillColor(...TEAL);
+  doc.rect(0, 0, 210, 28, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(255, 255, 255);
+  doc.text('SINAN CARE LTD', margin, 13);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Application for Employment', margin, 20);
+  // Accent bar
+  doc.setFillColor(...CORAL);
+  doc.rect(0, 28, 210, 1.5, 'F');
+  y = 36;
+
+  // ── Personal Details ──
+  sectionTitle('PERSONAL DETAILS');
+  fieldRow('Title', data.title);
+  fieldPair('First Name', data.firstName, 'Middle Names', data.middleNames);
+  fieldRow('Surname', data.surname);
+  fieldRow('Address', data.address);
+  fieldPair('Post Code', data.postCode, 'Date of Birth', data.dob);
+  fieldPair('NI Number', data.niNumber, 'Nationality', data.nationality);
+  fieldPair('Ethnicity', data.ethnicity, 'Religion', data.religion);
+  y += 2;
+  fieldPair('Landline', data.landline, 'Mobile', data.mobile);
+  fieldRow('Email', data.email);
+  fieldRow('Languages Spoken', data.languages);
+  y += 2;
+  fieldRow('Next of Kin – Name', data.nokName);
+  fieldRow('Next of Kin – Address', data.nokAddress);
+  fieldRow('Next of Kin – Telephone', data.nokTelephone);
+  y += 2;
+  fieldRow('Position Applied For', data.positionApplied);
+
+  // ── Medical History ──
+  sectionTitle('MEDICAL HISTORY');
+  fieldPair('Disability', data.disability, 'Details', data.disabilityDetails);
+  fieldPair('Registered Disabled', data.registeredDisabled, 'Reg. No', data.regDisabledNo);
+  fieldRow('Medical Conditions', data.medicalConditions);
+  fieldRow('Current Medication', data.currentMedication);
+
+  // ── Education ──
+  sectionTitle('EDUCATION AND TRAINING');
+  data.academic.forEach((a, i) => {
+    if (a.school || a.qual) {
+      checkPage(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...CORAL);
+      doc.text(`Qualification ${i + 1}`, margin, y);
+      y += 4;
+      fieldPair('From', a.from, 'To', a.to);
+      fieldRow('School/College', a.school);
+      fieldRow('Qualifications', a.qual);
+      y += 2;
+    }
+  });
+  if (data.otherQuals.some(q => q)) {
+    checkPage(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...CORAL);
+    doc.text('Other Qualifications / Courses / Awards', margin, y);
+    y += 4;
+    data.otherQuals.forEach(q => {
+      if (q) { fieldRow('•', q); }
+    });
+  }
+
+  // ── Employment ──
+  sectionTitle('EMPLOYMENT HISTORY');
+  data.employment.forEach((e, i) => {
+    if (e.employer || e.responsibilities) {
+      checkPage(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...CORAL);
+      doc.text(`Employment ${i + 1}`, margin, y);
+      y += 4;
+      fieldPair('From', e.from, 'To', e.to);
+      fieldRow('Employer', e.employer);
+      fieldRow('Responsibilities', e.responsibilities);
+      fieldRow('Reason for Leaving', e.reason);
+      y += 2;
+    }
+  });
+  fieldPair('Other Employment', data.otherEmployment, 'Details', data.otherEmploymentDetails);
+  y += 2;
+
+  // Skills
+  checkPage(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...CORAL);
+  doc.text('Skills & Experience', margin, y);
+  y += 4;
+  if (data.skills.length) {
+    fieldRow('Training Areas', data.skills.join(', '));
+  } else {
+    fieldRow('Training Areas', 'None selected');
+  }
+
+  // ── Rehabilitation of Offenders ──
+  sectionTitle('REHABILITATION OF OFFENDERS ACT');
+  fieldRow('Criminal Record', data.criminalRecord === 'Yes' ? 'I have a criminal record' : 'I do not have a criminal record');
+  fieldRow('Agree to Disclose Future', data.futureDisclosure);
+  y += 2;
+  checkPage(14);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...CORAL);
+  doc.text('Address History (Past 5 Years)', margin, y); y += 4;
+  if (data.addrHistory1) fieldPair('Address 1', data.addrHistory1, 'Dates', data.addrDates1);
+  if (data.addrHistory2) fieldPair('Address 2', data.addrHistory2, 'Dates', data.addrDates2);
+  if (data.addrHistory3) fieldPair('Address 3', data.addrHistory3, 'Dates', data.addrDates3);
+
+  // ── Leisure ──
+  sectionTitle('LEISURE INTERESTS');
+  fieldRow('Interests', data.leisureInterests);
+
+  // ── References ──
+  sectionTitle('REFERENCES');
+  checkPage(20);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...CORAL);
+  doc.text('Reference 1 (Present / Most Recent Employer)', margin, y); y += 4;
+  fieldPair('Name', data.ref1Name, 'Title', data.ref1Title);
+  fieldRow('Company', data.ref1Company);
+  fieldRow('Address', data.ref1Address);
+  fieldPair('Telephone', data.ref1Tel, 'Email', data.ref1Email);
+  y += 3;
+  checkPage(16);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...CORAL);
+  doc.text('Reference 2', margin, y); y += 4;
+  fieldPair('Name', data.ref2Name, 'Title', data.ref2Title);
+  fieldRow('Company', data.ref2Company);
+  fieldRow('Address', data.ref2Address);
+  fieldPair('Telephone', data.ref2Tel, 'Email', data.ref2Email);
+
+  // ── Equal Opportunities ──
+  sectionTitle('EQUAL OPPORTUNITIES MONITORING');
+  fieldRow('Ethnic Origin', data.eoEthnicity);
+  fieldPair('Gender', data.eoGender, 'Age Group', data.eoAge);
+
+  // ── Declaration ──
+  sectionTitle('DECLARATION');
+  checkPage(20);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  const declText = 'I confirm the above information is complete and correct and that any untrue or misleading information will give my employer the right to terminate any employment contract offered. I agree to a DBS check if successful.';
+  const declLines = doc.splitTextToSize(declText, contentW);
+  doc.text(declLines, margin, y);
+  y += declLines.length * 3.5 + 6;
+  fieldPair('Signed', data.signatureName, 'Date', data.signatureDate);
+
+  // ══════════════════════════════════════════════════════════
+  // ══  PART 2: PRE-EMPLOYMENT HEALTH DECLARATION (PDF)  ══
+  // ══════════════════════════════════════════════════════════
+  doc.addPage();
+  y = 16;
+
+  // Header bar
+  doc.setFillColor(...CORAL);
+  doc.rect(0, 0, 210, 28, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(255, 255, 255);
+  doc.text('PRE-EMPLOYMENT HEALTH DECLARATION', margin, 13);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Sinan Care · 280 St Ann\'s Road, London N15 5BN · t: 020 38652502 · info@sinancare.com', margin, 21);
+  doc.setFillColor(...TEAL);
+  doc.rect(0, 28, 210, 1.5, 'F');
+  y = 36;
+
+  // Personal Details
+  sectionTitle('PERSONAL DETAILS');
+  fieldPair('Surname', data.hSurname, 'Title', data.hTitle);
+  fieldPair('Forename', data.hForename, 'Date of Birth', data.hDob);
+  fieldPair('Home Tel', data.hHomeTel, 'Mobile', data.hMobile);
+  fieldRow('Email', data.hEmail);
+  fieldRow('Home Address', data.hHomeAddress);
+  fieldRow('Post Code', data.hPostCode);
+  fieldPair('Job Applied For', data.hJobApplied, 'Workplace Location', data.hWorkplaceLocation);
+
+  // Health Questions Table
+  sectionTitle('HEALTH QUESTIONS');
+
+  const healthQs = [
+    [1, 'Any physical or mental condition that might affect your ability to do the job?'],
+    [2, 'Any physical or mental health condition affecting your safety or others at work?'],
+    [3, 'Any disabilities (as defined by the Disability Discrimination Act 2005)?'],
+    [4, 'Do you need adjustments to your workplace, equipment or working practices?'],
+    [5, 'Have you been retired or had your contract terminated due to ill health?'],
+    [6, 'Have you ever applied for or been awarded compensation for workplace injury/illness?'],
+    [7, 'Any other condition or health problem we should be aware of?'],
+    [8, 'Have you seen a doctor in the last year for any health problem?'],
+    [9, 'History of blackouts, fits, or epilepsy?'],
+    [10, 'Drug or alcohol dependency or misuse including prescription or recreational drugs?'],
+    [11, 'Health condition or injury caused or made worse by work?'],
+    [12, 'Musculo-skeletal conditions affecting ability to perform work tasks?'],
+  ];
+
+  healthQs.forEach(([num, text]) => {
+    checkPage(8);
+    const ans = data.hQuestions[num] || '—';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...TEAL);
+    doc.text(String(num), margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...DARK);
+    const lines = doc.splitTextToSize(text, contentW - 30);
+    doc.text(lines, margin + 8, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...(ans === 'Yes' ? [220,50,50] : [16,185,129]));
+    doc.text(ans, pageW - margin, y, { align: 'right' });
+    y += Math.max(lines.length * 3.8, 5) + 1.5;
+  });
+
+  // Activities difficulty
+  checkPage(10);
+  y += 2;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...CORAL);
+  doc.text('13. Difficulty with any of the following activities:', margin, y);
+  y += 5;
+
+  const activities = [
+    [14, 'a) Standing'], [15, 'b) Walking'], [16, 'c) Sitting'], [17, 'd) Stair Climbing'],
+    [18, 'e) Lifting'], [19, 'f) Driving'], [20, 'g) Kneeling, squatting, bending'], [21, 'h) Manual dexterity']
+  ];
+
+  activities.forEach(([num, text]) => {
+    checkPage(6);
+    const ans = data.hQuestions[num] || '—';
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...DARK);
+    doc.text(`  ${text}`, margin + 8, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...(ans === 'Yes' ? [220,50,50] : [16,185,129]));
+    doc.text(ans, pageW - margin, y, { align: 'right' });
+    y += 4.5;
+  });
+
+  checkPage(6);
+  y += 1;
+  const q22ans = data.hQuestions[22] || '—';
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...TEAL);
+  doc.text('22', margin, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+  doc.text('Have you had any serious operations or illness?', margin + 8, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...(q22ans === 'Yes' ? [220,50,50] : [16,185,129]));
+  doc.text(q22ans, pageW - margin, y, { align: 'right' });
+  y += 6;
+
+  // Vaccinations
+  sectionTitle('VACCINATIONS / IMMUNIZATIONS / TESTS');
+
+  const vaccinations = [
+    [23, 'Tuberculosis (BCG, Heaf, Mantoux or Tine)'],
+    [24, 'Rubella (German Measles)'], [25, 'Poliomyelitis'], [26, 'Hepatitis B'],
+    [27, 'Hepatitis B Antibodies (Date and Result)'], [28, 'HIV'],
+    [29, 'Tetanus'], [30, 'Typhoid'], [31, 'Any Other']
+  ];
+
+  vaccinations.forEach(([num, text]) => {
+    checkPage(6);
+    const ans = data.hQuestions[num] || '—';
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...TEAL);
+    doc.text(String(num), margin, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+    doc.text(text, margin + 8, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...(ans === 'Yes' ? [220,50,50] : [16,185,129]));
+    doc.text(ans, pageW - margin, y, { align: 'right' });
+    y += 5;
+  });
+
+  // GP
+  y += 3;
+  checkPage(14);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...CORAL);
+  doc.text('Name of Your GP (Doctor)', margin, y); y += 5;
+  fieldRow('GP Name', data.hGpName);
+  fieldRow('Address', data.hGpAddress);
+  fieldPair('Postcode', data.hGpPostcode, 'Phone', data.hGpPhone);
+
+  // Details of Yes answers
+  sectionTitle('DETAILS OF "YES" ANSWERS');
+  const hasAnyDetails = Object.values(data.hDetails).some(v => v);
+  if (hasAnyDetails) {
+    for (let i = 1; i <= 31; i++) {
+      if (data.hDetails[i]) {
+        checkPage(8);
+        fieldRow(`Q${i}`, data.hDetails[i]);
+      }
+    }
+  } else {
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('No details provided.', margin, y);
+    y += 6;
+  }
+
+  // Health Declaration Signature
+  sectionTitle('HEALTH DECLARATION CONFIRMATION');
+  checkPage(16);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+  const hDeclText = 'I confirm that to the best of my knowledge, the answers given above are true and correct. I also confirm that I have read and understand the guidance notes before making the above declaration and understand that failure to disclose any relevant information may result in serious action including dismissal.';
+  const hDeclLines = doc.splitTextToSize(hDeclText, contentW);
+  doc.text(hDeclLines, margin, y);
+  y += hDeclLines.length * 3.5 + 6;
+  fieldPair('Signed', data.hSignatureName, 'Date', data.hSignatureDate);
+  y += 4;
+  doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(160,160,160);
+  const storageNote = 'If successful, this document will be held in secure storage in your personnel file. If unsuccessful, it will be held for 6 months then destroyed.';
+  const snLines = doc.splitTextToSize(storageNote, contentW);
+  doc.text(snLines, margin, y);
+  y += snLines.length * 3 + 4;
+
+  // ── Return Notice ──
+  checkPage(28);
+  y += 6;
+  doc.setFillColor(245, 245, 242);
+  doc.roundedRect(margin, y, contentW, 24, 2, 2, 'F');
+  doc.setDrawColor(200, 200, 200);
+  doc.roundedRect(margin, y, contentW, 24, 2, 2, 'S');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...DARK);
+  doc.text('Please return your completed application form to Human Resources,', margin + 6, y + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  doc.text('Sinan Care Ltd', margin + 6, y + 11);
+  doc.text('The Pavilion Room 11 280 St Ann\'s Road, London N15 5BN', margin + 6, y + 15.5);
+  doc.text('Attention of HR Department or return it via e-mail to info@Sinancare.com', margin + 6, y + 20);
+  y += 30;
+
+  // ── For Office Use Only Table ──
+  checkPage(36);
+  doc.setFont('helvetica', 'bolditalic');
+  doc.setFontSize(10);
+  doc.setTextColor(...DARK);
+  doc.text('For Office Use Only', pageW / 2, y, { align: 'center' });
+  doc.setLineWidth(0.3);
+  const ulY = y + 1;
+  const ulW = doc.getTextWidth('For Office Use Only');
+  doc.line(pageW / 2 - ulW / 2, ulY, pageW / 2 + ulW / 2, ulY);
+  y += 8;
+
+  const officeHeaders = ['Date application\nreceived:', 'Interview\ndate', 'Date of work\npermit checked\n& copied by:', 'DBS Ref and\ndate', 'References\nreceived 1\nand 2', 'Employment\nstart date'];
+  const colW = contentW / 6;
+  const tableX = margin;
+  const headerH = 16;
+  const rowH = 14;
+
+  doc.setDrawColor(160, 160, 160);
+  doc.setLineWidth(0.3);
+  // Header row
+  doc.setFillColor(245, 245, 245);
+  doc.rect(tableX, y, contentW, headerH, 'FD');
+  officeHeaders.forEach((h, i) => {
+    const x = tableX + i * colW;
+    if (i > 0) doc.line(x, y, x, y + headerH + rowH);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...DARK);
+    const lines = h.split('\n');
+    lines.forEach((line, li) => {
+      doc.text(line, x + 3, y + 5 + li * 3.2);
+    });
+  });
+  // Empty row
+  doc.rect(tableX, y + headerH, contentW, rowH, 'D');
+  y += headerH + rowH + 4;
+
+  // ── Footer ──
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(160, 160, 160);
+    doc.text('Sinan Care Ltd · The Pavilion, Room 11, 280 St Ann\'s Road, London N15 5BN · info@Sinancare.com', pageW / 2, 290, { align: 'center' });
+    doc.text(`Page ${p} of ${pageCount}`, pageW - margin, 290, { align: 'right' });
+  }
+
+  return doc;
+}
+
+// ══════════ FORM SUBMISSION ══════════
+document.getElementById('applicationForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  if (!document.getElementById('agreeDeclaration').checked) {
+    alert('Please agree to the declaration before submitting.');
+    return;
+  }
+
+  if (!validateForm(this)) {
+    alert('Please complete all required fields correctly. Check highlighted fields for errors.');
+    return;
+  }
+
+  // Show loading
+  const btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<span class="spinner"></span> Generating PDF...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      const data = collectFormData();
+      const doc = generatePDF(data);
+      generatedPdfBlob = doc.output('blob');
+
+      // Show success modal
+      document.getElementById('successModal').classList.add('visible');
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      alert('An error occurred while generating the PDF. Please try again. Error: ' + err.message);
+    }
+    btn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Submit Application`;
+    btn.disabled = false;
+  }, 600);
+});
+
+// ══════════ DOWNLOAD PDF ══════════
+document.getElementById('downloadPdfBtn').addEventListener('click', function() {
+  if (!generatedPdfBlob) return;
+  const url = URL.createObjectURL(generatedPdfBlob);
+  const a = document.createElement('a');
+  const name = document.getElementById('firstName').value + '_' + document.getElementById('surname').value;
+  a.href = url;
+  a.download = `Sinan_Care_Application_${name.replace(/\s+/g, '_')}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ══════════ EMAIL PDF ══════════
+document.getElementById('emailPdfBtn').addEventListener('click', function() {
+  const name = (document.getElementById('firstName').value + ' ' + document.getElementById('surname').value).trim();
+  const position = document.getElementById('positionApplied').value || 'Employment';
+  const subject = encodeURIComponent(`Application form from ${name}`);
+  const body = encodeURIComponent(
+    `Dear Sinan Care HR Team,\n\nPlease find attached my completed application form for the position of ${position}.\n\nKind regards,\n${name}`
+  );
+  // Open mailto — user attaches the downloaded PDF
+  window.open(`mailto:Info@sinancare.com?subject=${subject}&body=${body}`, '_self');
+  alert('Your email client will open. Please attach the PDF you downloaded to complete the submission.');
+});
+
+// ══════════ AUTO-FILL DATE ══════════
+const todayDDMMYYYY = (() => { const d = new Date(); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); })();
+document.getElementById('signatureDate').value = todayDDMMYYYY;
+document.getElementById('hSignatureDate').value = todayDDMMYYYY;
+
+// Auto-populate Health Declaration from Part 1 when fields are empty
+function autoPopulateHealth() {
+  const map = [
+    ['surname', 'hSurname'], ['firstName', 'hForename'], ['dob', 'hDob'],
+    ['landline', 'hHomeTel'], ['mobile', 'hMobile'], ['email', 'hEmail'],
+    ['address', 'hHomeAddress'], ['postCode', 'hPostCode'],
+    ['positionApplied', 'hJobApplied'], ['signatureName', 'hSignatureName']
+  ];
+  map.forEach(([src, dst]) => {
+    const srcEl = document.getElementById(src);
+    const dstEl = document.getElementById(dst);
+    if (srcEl && dstEl && !dstEl.value && srcEl.value) {
+      dstEl.value = srcEl.value;
+    }
+  });
+  // Title radio
+  const srcTitle = document.querySelector('input[name="title"]:checked');
+  if (srcTitle) {
+    const dstTitle = document.querySelector(`input[name="hTitle"][value="${srcTitle.value}"]`);
+    if (dstTitle) dstTitle.checked = true;
+  }
+}
+// Trigger when scrolling to Part 2
+const healthObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { autoPopulateHealth(); healthObserver.disconnect(); } });
+}, { threshold: 0.1 });
+const partBanner = document.querySelector('.part-banner');
+if (partBanner) healthObserver.observe(partBanner);
+
+// ══════════ TAB SWITCHING ══════════
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId + 'Content').classList.add('active');
+  document.getElementById(tabId === 'tab1' ? 'tabBtn1' : 'tabBtn2').classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ══════════ REFERENCE PROGRESS BAR ══════════
+function updateRefProgress() {
+  const tab2 = document.getElementById('tab2Content');
+  if (!tab2.classList.contains('active')) return;
+  const sections = tab2.querySelectorAll('.form-section');
+  const steps = tab2.querySelectorAll('.ref-progress-step');
+  const scrollPos = window.scrollY + 200;
+  let activeIdx = 0;
+  sections.forEach((s, i) => {
+    if (s.offsetTop <= scrollPos) activeIdx = i;
+  });
+  steps.forEach((step, i) => {
+    step.classList.remove('active', 'completed');
+    if (i < activeIdx) step.classList.add('completed');
+    else if (i === activeIdx) step.classList.add('active');
+  });
+  const el = document.getElementById('refCurrentSection');
+  if (el) el.textContent = activeIdx + 1;
+}
+window.addEventListener('scroll', updateRefProgress);
+
+// Auto-fill reference date
+document.getElementById('refSignatureDate').value = todayDDMMYYYY;
+
+// ══════════ COLLECT REFERENCE DATA ══════════
+function collectRefData() {
+  const f = document.getElementById('referenceForm');
+  const val = (id) => (document.getElementById(id)?.value || '').trim();
+  const radio = (name) => { const el = f.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; };
+
+  return {
+    applicantName: val('refApplicantName'),
+    postApplied: val('refPostApplied'),
+    organisation: val('refOrganisation'),
+    refereeName: val('refRefereeName'),
+    refereePosition: val('refRefereePosition'),
+    refereeAddress: val('refRefereeAddress'),
+    refereeTel: val('refRefereeTel'),
+    capacity: val('refCapacity'),
+    howLong: val('refHowLong'),
+    datesEmployment: val('refDatesEmployment'),
+    capacityEmployed: val('refCapacityEmployed'),
+    mainDuties: val('refMainDuties'),
+    salary: val('refSalary'),
+    reasonLeaving: val('refReasonLeaving'),
+    sickDays: val('refSickDays'),
+    rateTeamwork: radio('rateTeamwork'),
+    rateHonesty: radio('rateHonesty'),
+    ratePunctuality: radio('ratePunctuality'),
+    rateReliability: radio('rateReliability'),
+    rateAttitude: radio('rateAttitude'),
+    childProtection: radio('refChildProtection'),
+    abilityComment: val('refAbilityComment'),
+    reasonNotAppoint: val('refReasonNotAppoint'),
+    furtherInfo: val('refFurtherInfo'),
+    signatureName: val('refSignatureName'),
+    signatureDate: val('refSignatureDate'),
+  };
+}
+
+// ══════════ GENERATE REFERENCE PDF ══════════
+let generatedRefPdfBlob = null;
+
+function generateRefPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageW = 210, margin = 18;
+  const contentW = pageW - margin * 2;
+  let y = 16;
+
+  const TEAL = [13, 59, 63];
+  const CORAL = [224, 116, 86];
+  const GRAY = [75, 85, 99];
+  const DARK = [31, 41, 55];
+
+  function checkPage(needed) {
+    if (y + needed > 278) { doc.addPage(); y = 16; }
+  }
+
+  function sectionTitle(text) {
+    checkPage(16);
+    doc.setFillColor(...CORAL);
+    doc.roundedRect(margin, y, contentW, 10, 1.5, 1.5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text(text, margin + 4, y + 7);
+    y += 14;
+  }
+
+  function fieldRow(label, value) {
+    checkPage(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(label + ':', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    const labelW = doc.getTextWidth(label + ': ');
+    const lines = doc.splitTextToSize(value || '—', contentW - labelW - 2);
+    doc.text(lines, margin + labelW + 1, y);
+    y += Math.max(lines.length * 4.5, 5.5);
+  }
+
+  function fieldPair(l1, v1, l2, v2) {
+    checkPage(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(l1 + ':', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    const lw1 = doc.getTextWidth(l1 + ': ');
+    doc.text(v1 || '—', margin + lw1 + 1, y);
+
+    const midX = margin + contentW / 2;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    doc.text(l2 + ':', midX, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    const lw2 = doc.getTextWidth(l2 + ': ');
+    doc.text(v2 || '—', midX + lw2 + 1, y);
+    y += 5.5;
+  }
+
+  // ── Header ──
+  doc.setFillColor(...CORAL);
+  doc.rect(0, 0, 210, 28, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(255, 255, 255);
+  doc.text('REFERENCE REQUEST FORM', margin, 13);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Sinan Care Ltd · Room 11, The Pavilion, 280 St Ann\'s Road, London N15 5BN', margin, 21);
+  doc.setFillColor(...TEAL);
+  doc.rect(0, 28, 210, 1.5, 'F');
+  y = 36;
+
+  // ── Applicant & General ──
+  sectionTitle('APPLICANT & GENERAL INFORMATION');
+  fieldRow('Name of Applicant', data.applicantName);
+  fieldPair('Post Applied For', data.postApplied, 'Organisation', data.organisation);
+  y += 3;
+  fieldRow('Referee\'s Name', data.refereeName);
+  fieldPair('Position', data.refereePosition, 'Telephone', data.refereeTel);
+  fieldRow('Address', data.refereeAddress);
+  fieldRow('Capacity Known', data.capacity);
+  fieldRow('How Long Known', data.howLong);
+
+  // ── Employment Information ──
+  sectionTitle('EMPLOYMENT INFORMATION');
+  fieldRow('Dates of Employment', data.datesEmployment);
+  fieldRow('Capacity Employed', data.capacityEmployed);
+  fieldRow('Main Duties', data.mainDuties);
+  fieldPair('Salary', data.salary, 'Reason for Leaving', data.reasonLeaving);
+  fieldRow('Sick Days (Last Year)', data.sickDays);
+
+  // ── Assessment of Performance ──
+  sectionTitle('ASSESSMENT OF PERFORMANCE');
+  checkPage(40);
+
+  const ratings = [
+    ['Teamwork', data.rateTeamwork],
+    ['Honesty', data.rateHonesty],
+    ['Punctuality', data.ratePunctuality],
+    ['Reliability', data.rateReliability],
+    ['Attitude', data.rateAttitude],
+  ];
+
+  // Table header
+  const cols = ['Attribute', 'Poor', 'Average', 'Good', 'Excellent'];
+  const colWidths = [40, 28, 28, 28, 28];
+  let tx = margin;
+
+  doc.setFillColor(245, 245, 245);
+  doc.rect(margin, y, contentW, 8, 'F');
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y + 8, margin + contentW, y + 8);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...DARK);
+  cols.forEach((c, ci) => {
+    doc.text(c, tx + 3, y + 5.5);
+    tx += colWidths[ci];
+  });
+  y += 10;
+
+  ratings.forEach(([attr, val]) => {
+    checkPage(8);
+    tx = margin;
+    doc.setDrawColor(230, 230, 230);
+    doc.line(margin, y + 4, margin + contentW, y + 4);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...DARK);
+    doc.text(attr, tx + 3, y + 2.5);
+    tx += colWidths[0];
+
+    ['Poor', 'Average', 'Good', 'Excellent'].forEach((level, li) => {
+      if (val === level) {
+        doc.setFillColor(...CORAL);
+        doc.circle(tx + colWidths[li + 1] / 2, y + 2, 2.5, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5);
+        doc.setTextColor(255, 255, 255);
+        doc.text('✓', tx + colWidths[li + 1] / 2 - 1.2, y + 3.2);
+      } else {
+        doc.setDrawColor(200, 200, 200);
+        doc.circle(tx + colWidths[li + 1] / 2, y + 2, 2.5, 'S');
+      }
+      tx += colWidths[li + 1];
+    });
+    y += 7;
+  });
+  y += 4;
+
+  // ── Child Protection ──
+  sectionTitle('CHILD PROTECTION');
+  fieldRow('Concerned about contact with children/vulnerable adults', data.childProtection);
+
+  // ── Other Information ──
+  sectionTitle('OTHER INFORMATION');
+  fieldRow('Ability to carry out duties', data.abilityComment);
+  fieldRow('Reason not to appoint', data.reasonNotAppoint);
+  fieldRow('Further information', data.furtherInfo);
+
+  // ── Data Protection & Signature ──
+  sectionTitle('DATA PROTECTION & DECLARATION');
+  checkPage(20);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...GRAY);
+  const dpText = 'This information is being collected by Sinan Care Ltd for the purpose of recruitment and selection. If you are giving a reference on behalf of a present or previous employer, the subject will be entitled to see it. This reference is given on the understanding that any legal responsibility or liability for accuracy or otherwise is hereby excluded.';
+  const dpLines = doc.splitTextToSize(dpText, contentW);
+  doc.text(dpLines, margin, y);
+  y += dpLines.length * 3.5 + 6;
+
+  fieldPair('Signed', data.signatureName, 'Date', data.signatureDate);
+
+  // ── Footer ──
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(160, 160, 160);
+    doc.text('Sinan Care Ltd · The Pavilion, Room 11, 280 St Ann\'s Road, London N15 5BN · info@Sinancare.com', pageW / 2, 290, { align: 'center' });
+    doc.text(`Page ${p} of ${pageCount}`, pageW - margin, 290, { align: 'right' });
+  }
+
+  return doc;
+}
+
+// ══════════ REFERENCE FORM SUBMISSION ══════════
+document.getElementById('referenceForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  if (!validateForm(this)) {
+    alert('Please complete all required fields correctly. Check highlighted fields for errors.');
+    return;
+  }
+
+  const btn = document.getElementById('refSubmitBtn');
+  btn.innerHTML = '<span class="spinner"></span> Generating PDF...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      const data = collectRefData();
+      const doc = generateRefPDF(data);
+      generatedRefPdfBlob = doc.output('blob');
+
+      document.getElementById('refSuccessModal').classList.add('visible');
+    } catch (err) {
+      console.error('Reference PDF generation error:', err);
+      alert('An error occurred while generating the PDF. Please try again. Error: ' + err.message);
+    }
+    btn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Submit Reference`;
+    btn.disabled = false;
+  }, 600);
+});
+
+// ══════════ REFERENCE PDF DOWNLOAD ══════════
+document.getElementById('refDownloadPdfBtn').addEventListener('click', function() {
+  if (!generatedRefPdfBlob) return;
+  const url = URL.createObjectURL(generatedRefPdfBlob);
+  const a = document.createElement('a');
+  const applicant = document.getElementById('refApplicantName').value || 'Applicant';
+  a.href = url;
+  a.download = `Sinan_Care_Reference_${applicant.replace(/\s+/g, '_')}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ══════════ REFERENCE EMAIL ══════════
+document.getElementById('refEmailPdfBtn').addEventListener('click', function() {
+  const applicant = document.getElementById('refApplicantName').value || 'Applicant';
+  const referee = document.getElementById('refRefereeName').value || 'Referee';
+  const subject = encodeURIComponent(`Reference for ${applicant}`);
+  const body = encodeURIComponent(
+    `Dear Sinan Care HR Team,\n\nPlease find attached my completed reference form for ${applicant}.\n\nKind regards,\n${referee}`
+  );
+  window.open(`mailto:Info@sinancare.com?subject=${subject}&body=${body}`, '_self');
+  alert('Your email client will open. Please attach the PDF you downloaded to complete the submission.');
+});
+</script>
+</body>
+</html>
