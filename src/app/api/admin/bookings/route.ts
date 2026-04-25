@@ -115,7 +115,9 @@ export async function POST(req: NextRequest) {
     if (!schedule) return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
     if (!schedule.vehicle) return NextResponse.json({ error: 'No vehicle assigned' }, { status: 400 })
 
-    const takenSeats = schedule.bookingItems.map(bi => bi.seatNumber)
+    const takenSeats = schedule.bookingItems.map(
+      (bi: { seatNumber: number }) => bi.seatNumber
+    )
     if (takenSeats.includes(seatNumber)) {
       return NextResponse.json({ error: 'Seat already taken' }, { status: 409 })
     }
