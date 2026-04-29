@@ -17,7 +17,8 @@ import {
   Plus,
   Trash2,
   LayoutList,
-  CalendarDays
+  CalendarDays,
+  Navigation
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -69,6 +70,7 @@ export default function DriverSchedulePage() {
   const [unavailReason, setUnavailReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [currentWeek, setCurrentWeek] = useState(new Date())
+  const [publishingTracking, setPublishingTracking] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [])
 
@@ -114,6 +116,60 @@ export default function DriverSchedulePage() {
     if (!confirm('Remove this unavailability entry?')) return
     await fetch(`/api/driver/unavailability?id=${id}`, { method: 'DELETE' })
     fetchData()
+  }
+
+  async function publishTracking(scheduleId: string, status: string) {
+    setPublishingTracking(`${scheduleId}:${status}`)
+
+    const sendUpdate = async (coords?: GeolocationCoordinates) => {
+      const res = await fetch('/api/driver/tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduleId,
+          status,
+          latitude: coords?.latitude,
+          longitude: coords?.longitude,
+          notes: coords ? 'Driver GPS update from schedule dashboard' : 'Driver trip-progress update without browser GPS coordinates',
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to publish live tracking update')
+      await fetchData()
+    }
+
+    try {
+      if ('geolocation' in navigator) {
+        await new Promise<void>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              try {
+                await sendUpdate(position.coords)
+              } catch (error) {
+                alert(error instanceof Error ? error.message : 'Failed to publish live tracking update')
+              } finally {
+                resolve()
+              }
+            },
+            async () => {
+              try {
+                await sendUpdate()
+              } catch (error) {
+                alert(error instanceof Error ? error.message : 'Failed to publish live tracking update')
+              } finally {
+                resolve()
+              }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+          )
+        })
+      } else {
+        await sendUpdate()
+      }
+    } finally {
+      setPublishingTracking(null)
+    }
   }
 
   // Week view helpers
@@ -328,6 +384,54 @@ export default function DriverSchedulePage() {
                       </div>
 
                       <div className="mt-2 text-xs text-slate-400">{schedule.recurrence}</div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => publishTracking(schedule.id, 'DEPARTED_DEPOT')}
+                          disabled={publishingTracking !== null}
+                        >
+                          <Navigation className="w-3 h-3 mr-1" />
+                          {publishingTracking === `${schedule.id}:DEPARTED_DEPOT` ? 'Publishing...' : 'Departed'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => publishTracking(schedule.id, 'EN_ROUTE')}
+                          disabled={publishingTracking !== null}
+                        >
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {publishingTracking === `${schedule.id}:EN_ROUTE` ? 'Publishing...' : 'En route'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => publishTracking(schedule.id, 'ARRIVED_PICKUP')}
+                          disabled={publishingTracking !== null}
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          {publishingTracking === `${schedule.id}:ARRIVED_PICKUP` ? 'Publishing...' : 'At pickup'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => publishTracking(schedule.id, 'ARRIVED_SCHOOL')}
+                          disabled={publishingTracking !== null}
+                        >
+                          <Bus className="w-3 h-3 mr-1" />
+                          {publishingTracking === `${schedule.id}:ARRIVED_SCHOOL` ? 'Publishing...' : 'At school'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => publishTracking(schedule.id, 'COMPLETED')}
+                          disabled={publishingTracking !== null}
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          {publishingTracking === `${schedule.id}:COMPLETED` ? 'Publishing...' : 'Complete'}
+                        </Button>
+                      </div>
 
                       {/* Pupil list */}
                       {schedule.seatAssignments.length > 0 && (

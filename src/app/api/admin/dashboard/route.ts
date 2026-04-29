@@ -64,7 +64,7 @@ export async function GET() {
       }),
     ])
 
-  const fullVehiclesAlert = fullVehicles.filter((s) => {
+  const fullVehiclesAlert = fullVehicles.filter((s: any) => {
     const assigned = s._count?.seatAssignments || 0
     const capacity = s.vehicle?.seats || 0
     return assigned >= capacity

@@ -10,7 +10,7 @@ async function resolveManualIdentityCode(code: string) {
   const pupils = await prisma.pupil.findMany({
     select: { id: true, platformId: true }
   })
-  const pupilMatch = pupils.find((pupil) => generateIdentityCode('PUPIL', pupil.id, pupil.platformId) === normalized)
+  const pupilMatch = pupils.find((pupil: any) => generateIdentityCode('PUPIL', pupil.id, pupil.platformId) === normalized)
   if (pupilMatch) {
     return { type: 'PUPIL' as const, pupilId: pupilMatch.id }
   }
@@ -18,7 +18,7 @@ async function resolveManualIdentityCode(code: string) {
   const users = await prisma.user.findMany({
     select: { id: true, platformId: true }
   })
-  const userMatch = users.find((user) => generateIdentityCode('USER', user.id, user.platformId) === normalized)
+  const userMatch = users.find((user: any) => generateIdentityCode('USER', user.id, user.platformId) === normalized)
   if (userMatch) {
     return { type: 'USER' as const, userId: userMatch.id }
   }

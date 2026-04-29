@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getAIProviderConfig, requestAIResponse } from '@/lib/ai-provider'
+import { auth } from '@/lib/auth'
 
 // --- Carity Company Knowledge Base ---
 const CARITY_INFO = `
@@ -56,10 +57,26 @@ How to apply:
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, userId } = await req.json()
+    const { message, userId: requestedUserId } = await req.json()
 
-    if (!message || !userId) {
-      return NextResponse.json({ error: 'Message and userId required' }, { status: 400 })
+    if (!message) {
+      return NextResponse.json({ error: 'Message required' }, { status: 400 })
+    }
+
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const sessionUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, role: true },
+    })
+    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'SCHEDULER']
+    const userId = requestedUserId || session.user.id
+
+    if (userId !== session.user.id && !adminRoles.includes(sessionUser?.role || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Store user message
@@ -278,6 +295,78 @@ async function fetchContextData(userId: string, role: string): Promise<string> {
     }
   }
 
+  if (role === 'PARENT') {
+    const recentBookings = await prisma.booking.findMany({
+      where: { userId },
+      include: {
+        payment: true,
+        items: {
+          include: {
+            pupil: { select: { fullName: true } },
+            schedule: {
+              include: {
+                driver: { include: { user: { select: { name: true, phone: true } } } },
+                vehicle: { select: { regPlate: true, type: true, make: true, model: true } },
+                school: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    })
+
+    if (recentBookings.length > 0) {
+      contextStr += '\nRecent bookings and payments:\n'
+      recentBookings.forEach((booking: any) => {
+        contextStr += `- Booking ${booking.id}: ${booking.status}, Total GBP${booking.totalAmount}, Payment ${booking.payment?.status || 'not recorded'}${booking.payment?.paidAt ? ', paid ' + new Date(booking.payment.paidAt).toLocaleString('en-GB') : ''}\n`
+        booking.items.forEach((item: any) => {
+          contextStr += `  ${item.pupil.fullName}: ${item.schedule.routeName}, ${item.direction}, ${new Date(item.tripDate).toLocaleDateString('en-GB')}, Seat ${item.seatNumber}, Vehicle ${item.schedule.vehicle?.regPlate || 'TBA'}, Driver ${item.schedule.driver?.user?.name || 'TBA'}\n`
+        })
+      })
+
+      const scheduleIds = Array.from(new Set(recentBookings.flatMap((booking: any) => booking.items.map((item: any) => item.scheduleId)))) as string[]
+      const recentLogs = scheduleIds.length > 0 ? await prisma.tripLog.findMany({
+        where: { scheduleId: { in: scheduleIds } },
+        include: {
+          schedule: { select: { routeName: true } },
+          pupil: { select: { fullName: true } },
+          vehicle: { select: { regPlate: true } },
+        },
+        orderBy: { timestamp: 'desc' },
+        take: 10,
+      }) : []
+
+      if (recentLogs.length > 0) {
+        contextStr += '\nLatest live tracking and trip events:\n'
+        recentLogs.forEach((log: any) => {
+          contextStr += `- ${log.schedule?.routeName || 'Route'}: ${log.status} at ${new Date(log.timestamp).toLocaleString('en-GB')}${log.pupil?.fullName ? ' for ' + log.pupil.fullName : ''}${log.latitude !== null && log.longitude !== null ? ' GPS ' + log.latitude + ',' + log.longitude : ''}\n`
+        })
+      }
+    }
+  }
+
+  if (role === 'DRIVER') {
+    const recentDriverLogs = await prisma.tripLog.findMany({
+      where: { driver: { is: { userId } } },
+      include: {
+        schedule: { select: { routeName: true } },
+        pupil: { select: { fullName: true } },
+        vehicle: { select: { regPlate: true } },
+      },
+      orderBy: { timestamp: 'desc' },
+      take: 10,
+    })
+
+    if (recentDriverLogs.length > 0) {
+      contextStr += '\nYour recent trip events:\n'
+      recentDriverLogs.forEach((log: any) => {
+        contextStr += `- ${log.schedule?.routeName || 'Route'}: ${log.status} at ${new Date(log.timestamp).toLocaleString('en-GB')}${log.pupil?.fullName ? ' for ' + log.pupil.fullName : ''}${log.latitude !== null && log.longitude !== null ? ' GPS ' + log.latitude + ',' + log.longitude : ''}\n`
+      })
+    }
+  }
+
   // Add available routes for booking context
   const availableRoutes = await prisma.transportSchedule.findMany({
     where: { status: 'SCHEDULED' },
@@ -312,6 +401,9 @@ interface RawContext {
   totalVehicles?: number
   totalRoutes?: number
   availableRoutes?: any[]
+  recentBookings?: any[]
+  recentTripLogs?: any[]
+  recentPayments?: any[]
 }
 
 async function fetchRawContextData(userId: string, role: string): Promise<RawContext> {
@@ -341,6 +433,30 @@ async function fetchRawContextData(userId: string, role: string): Promise<RawCon
         },
       },
     })
+
+    const recentBookings = await prisma.booking.findMany({
+      where: { userId },
+      include: {
+        payment: true,
+        items: {
+          include: {
+            pupil: { select: { fullName: true } },
+            schedule: { include: { driver: { include: { user: { select: { name: true } } } }, vehicle: true, school: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    })
+
+    ctx.recentBookings = recentBookings
+    const scheduleIds = Array.from(new Set(recentBookings.flatMap((booking: any) => booking.items.map((item: any) => item.scheduleId)))) as string[]
+    ctx.recentTripLogs = scheduleIds.length > 0 ? await prisma.tripLog.findMany({
+      where: { scheduleId: { in: scheduleIds } },
+      include: { schedule: true, pupil: true, vehicle: true },
+      orderBy: { timestamp: 'desc' },
+      take: 10,
+    }) : []
   } else if (role === 'DRIVER') {
     ctx.driver = await prisma.driver.findUnique({
       where: { userId },
@@ -357,6 +473,13 @@ async function fetchRawContextData(userId: string, role: string): Promise<RawCon
         },
       },
     })
+
+    ctx.recentTripLogs = await prisma.tripLog.findMany({
+      where: { driver: { is: { userId } } },
+      include: { schedule: true, pupil: true, vehicle: true },
+      orderBy: { timestamp: 'desc' },
+      take: 10,
+    })
   } else if (['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'SCHEDULER'].includes(role)) {
     ctx.isAdmin = true
     const [tp, td, tv, tr] = await Promise.all([
@@ -369,6 +492,16 @@ async function fetchRawContextData(userId: string, role: string): Promise<RawCon
     ctx.totalDrivers = td
     ctx.totalVehicles = tv
     ctx.totalRoutes = tr
+    ctx.recentPayments = await prisma.payment.findMany({
+      include: { booking: { select: { id: true, status: true, totalAmount: true, user: { select: { name: true, email: true } } } } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    })
+    ctx.recentTripLogs = await prisma.tripLog.findMany({
+      include: { schedule: true, pupil: true, vehicle: true, driver: { include: { user: { select: { name: true } } } } },
+      orderBy: { timestamp: 'desc' },
+      take: 10,
+    })
   }
 
   // Available routes for booking
@@ -443,8 +576,29 @@ function generateLocalResponse(message: string, role: string, userName: string, 
     return `I don't see any scheduled routes at the moment. For the latest information, check the **Schedules** section on your dashboard or contact admin@carity.com.`
   }
 
-  // --- Parent-specific: Pickup / Driver / Absence / Child ---
+  // --- Parent-specific: Pickup / Driver / Payment / Tracking / Absence / Child ---
   if (role === 'PARENT') {
+    if (msg.includes('payment') || msg.includes('paid') || msg.includes('stripe') || msg.includes('refund') || msg.includes('invoice')) {
+      if (ctx.recentBookings && ctx.recentBookings.length > 0) {
+        const paymentRows = ctx.recentBookings.map((booking: any) => {
+          const trips = booking.items?.map((item: any) => `${item.pupil?.fullName || 'Pupil'} on ${item.schedule?.routeName || 'route'} (${new Date(item.tripDate).toLocaleDateString('en-GB')})`).join('; ')
+          return `**Booking ${booking.id.slice(-6)}** - ${booking.status}, GBP${booking.totalAmount}, payment ${booking.payment?.status || 'not recorded'}${booking.payment?.paidAt ? ', paid ' + new Date(booking.payment.paidAt).toLocaleString('en-GB') : ''}. ${trips || ''}`
+        }).join('\n')
+        return `Here are your latest booking and payment records from the database:\n\n${paymentRows}\n\nStripe payments are confirmed after checkout completes and the webhook reconciles the booking. Refund eligibility follows the existing cancellation policy shown in your bookings area.`
+      }
+      return `I do not see a recent booking or payment record on your account yet. If you have just paid through Stripe, please refresh your Bookings page; if it still does not appear, contact admin@carity.com with your payment reference.`
+    }
+
+    if (msg.includes('track') || msg.includes('tracking') || msg.includes('gps') || msg.includes('where') || msg.includes('late') || msg.includes('delay') || msg.includes('status')) {
+      if (ctx.recentTripLogs && ctx.recentTripLogs.length > 0) {
+        const latest = ctx.recentTripLogs.slice(0, 5).map((log: any) => {
+          const gps = log.latitude !== null && log.longitude !== null ? ` GPS ${Number(log.latitude).toFixed(5)}, ${Number(log.longitude).toFixed(5)}` : ''
+          return `**${log.schedule?.routeName || 'Route'}** - ${log.status} at ${new Date(log.timestamp).toLocaleString('en-GB')}${log.pupil?.fullName ? ' for ' + log.pupil.fullName : ''}${gps}`
+        }).join('\n')
+        return `Here are the latest live tracking updates for your booked routes:\n\n${latest}\n\nOpen **Live Tracking** for the current map-style view. The data updates when the assigned driver publishes GPS or trip-progress events.`
+      }
+      return `I do not see a live GPS update for your booked route yet. Please open **Live Tracking**; it will show live data once the assigned driver starts publishing location or route-progress updates.`
+    }
     if (msg.includes('pickup') || msg.includes('pick up') || msg.includes('what time') || msg.includes('departure')) {
       if (ctx.parent?.pupils?.length > 0) {
         const assignments = ctx.parent.pupils.flatMap((p: any) => p.seatAssignments)
@@ -493,6 +647,16 @@ function generateLocalResponse(message: string, role: string, userName: string, 
 
   // --- Driver-specific ---
   if (role === 'DRIVER') {
+    if (msg.includes('track') || msg.includes('tracking') || msg.includes('gps') || msg.includes('status') || msg.includes('late') || msg.includes('delay')) {
+      if (ctx.recentTripLogs && ctx.recentTripLogs.length > 0) {
+        const events = ctx.recentTripLogs.slice(0, 5).map((log: any) => {
+          const gps = log.latitude !== null && log.longitude !== null ? ` GPS ${Number(log.latitude).toFixed(5)}, ${Number(log.longitude).toFixed(5)}` : ''
+          return `**${log.schedule?.routeName || 'Route'}** - ${log.status} at ${new Date(log.timestamp).toLocaleString('en-GB')}${log.pupil?.fullName ? ' for ' + log.pupil.fullName : ''}${gps}`
+        }).join('\n')
+        return `Here are your latest trip updates from the database:\n\n${events}\n\nUse **My Schedule** to publish Departed, En route, At pickup, At school, and Complete updates for parents.`
+      }
+      return `No tracking updates have been recorded for your assigned routes yet. Use **My Schedule** to publish the current route status and, if your browser allows it, GPS coordinates.`
+    }
     if (msg.includes('pupil') || msg.includes('passenger') || msg.includes('manifest') || msg.includes('student')) {
       if (ctx.driver?.schedules?.length > 0) {
         let pupilList = ''
@@ -524,6 +688,22 @@ function generateLocalResponse(message: string, role: string, userName: string, 
   if (ctx.isAdmin) {
     if (msg.includes('overview') || msg.includes('stats') || msg.includes('summary') || msg.includes('dashboard')) {
       return `Here's the platform overview, ${firstName}:\n\n**${ctx.totalPupils || 0}** total pupils\n**${ctx.totalDrivers || 0}** active drivers\n**${ctx.totalVehicles || 0}** vehicles\n**${ctx.totalRoutes || 0}** active routes\n\nFor detailed analytics, check the **Dashboard** or individual management sections.`
+    }
+
+    if (msg.includes('payment') || msg.includes('stripe') || msg.includes('refund') || msg.includes('revenue')) {
+      if (ctx.recentPayments && ctx.recentPayments.length > 0) {
+        const payments = ctx.recentPayments.slice(0, 5).map((payment: any) => `**${payment.booking?.user?.name || payment.booking?.user?.email || 'Parent'}** - GBP${payment.amount}, ${payment.status}, booking ${payment.booking?.status || 'unknown'}`).join('\n')
+        return `Here are the latest payment records from the database:\n\n${payments}\n\nFor reconciliation, compare Stripe Checkout session IDs and payment intent IDs in the booking payment records.`
+      }
+      return `I do not see recent payment records yet. Once Stripe Checkout completes and the webhook runs, payments will appear in the database for admin review.`
+    }
+
+    if (msg.includes('track') || msg.includes('tracking') || msg.includes('gps') || msg.includes('live')) {
+      if (ctx.recentTripLogs && ctx.recentTripLogs.length > 0) {
+        const logs = ctx.recentTripLogs.slice(0, 5).map((log: any) => `**${log.schedule?.routeName || 'Route'}** - ${log.status} by ${log.driver?.user?.name || 'driver'} at ${new Date(log.timestamp).toLocaleString('en-GB')}`).join('\n')
+        return `Latest live tracking events:\n\n${logs}\n\nDrivers publish these updates from **My Schedule**, and parents view them in **Live Tracking**.`
+      }
+      return `No live tracking events have been recorded yet. Drivers can start publishing route-progress and GPS updates from their schedule page.`
     }
 
     if (msg.includes('application') || msg.includes('applicant') || msg.includes('recruitment')) {
@@ -581,9 +761,21 @@ function getWelcomeMessage(firstName: string, role: string): string {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const userId = searchParams.get('userId') || ''
+    const requestedUserId = searchParams.get('userId') || ''
 
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    const session = await auth()
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const sessionUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    })
+    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'SCHEDULER']
+    const userId = requestedUserId || session.user.id
+
+    if (userId !== session.user.id && !adminRoles.includes(sessionUser?.role || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const messages = await prisma.chatMessage.findMany({
       where: { userId },

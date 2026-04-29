@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { processStripeRefund } from '@/lib/stripe-refunds'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -46,6 +47,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
       const refundable = hoursUntil > 5
 
+      let stripeRefundId: string | null = null
+
+      if (refundable && booking.payment) {
+        const refund = await processStripeRefund({
+          bookingId: id,
+          payment: booking.payment,
+          reason: data.reason || 'Admin cancellation',
+        })
+        stripeRefundId = refund.refundId
+      }
+
       const updated = await prisma.booking.update({
         where: { id },
         data: {
@@ -53,7 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           cancelReason: data.reason || null,
           cancelledAt: new Date(),
           refundable,
-          ...(refundable && { refundedAt: new Date() }),
+          ...(refundable && { refundedAt: new Date(), refundId: stripeRefundId }),
         },
       })
 
@@ -75,12 +87,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // Admin override refund
     if (data.action === 'refund') {
+      let stripeRefundId: string | null = null
+
+      if (booking.payment) {
+        const refund = await processStripeRefund({
+          bookingId: id,
+          payment: booking.payment,
+          reason: data.reason || 'Admin override refund',
+        })
+        stripeRefundId = refund.refundId
+      }
+
       const updated = await prisma.booking.update({
         where: { id },
         data: {
           status: 'REFUNDED',
           refundedAt: new Date(),
           refundable: true,
+          refundId: stripeRefundId,
           cancelReason: data.reason || 'Admin override refund',
         },
       })

@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date()
-    const pupilIds = schedule.seatAssignments.map((assignment) => assignment.pupilId)
+    const pupilIds = schedule.seatAssignments.map((assignment: any) => assignment.pupilId)
 
     await prisma.tripLog.deleteMany({
       where: {
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const entries = schedule.seatAssignments.map((assignment) => ({
+    const entries = schedule.seatAssignments.map((assignment: any) => ({
       scheduleId,
       driverId,
       vehicleId: schedule.vehicleId,

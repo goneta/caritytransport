@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { processStripeRefund } from '@/lib/stripe-refunds'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -64,6 +65,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ error: 'Cancellation reason is required' }, { status: 400 })
       }
 
+      let stripeRefundId: string | null = null
+
+      if (refundable && booking.payment) {
+        const refund = await processStripeRefund({
+          bookingId: id,
+          payment: booking.payment,
+          reason: data.reason,
+        })
+        stripeRefundId = refund.refundId
+      }
+
       const updated = await prisma.booking.update({
         where: { id },
         data: {
@@ -71,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           cancelReason: data.reason,
           cancelledAt: new Date(),
           refundable,
-          ...(refundable && { refundedAt: new Date() }),
+          ...(refundable && { refundedAt: new Date(), refundId: stripeRefundId }),
         },
       })
 
@@ -81,7 +93,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         data: { status: 'CANCELLED' },
       })
 
-      // Update payment if refundable
+      // Update payment if refundable after Stripe/local refund processing completes
       if (refundable && booking.payment) {
         await prisma.payment.update({
           where: { bookingId: id },

@@ -83,6 +83,13 @@ export default function BasketPage() {
 
     if (res.ok) {
       setBookingId(data.bookingId)
+
+      if (data.checkoutUrl) {
+        toast.success("Redirecting to secure Stripe checkout...")
+        window.location.href = data.checkoutUrl
+        return
+      }
+
       setPayStep("success")
       setItems([]) // Clear local basket
     } else if (res.status === 409 && data.conflicts) {
@@ -279,9 +286,9 @@ export default function BasketPage() {
               </div>
 
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                <p>💳 Secure payment via Stripe</p>
-                <p>✅ Instant confirmation email</p>
-                <p>↩️ Full refund if cancelled 5+ hours before departure</p>
+                <p>Secure payment via Stripe</p>
+                <p>Instant confirmation after Stripe verifies payment</p>
+                <p>Full refund if cancelled 5+ hours before departure</p>
               </div>
 
               <Button className="w-full" onClick={handleConfirmPayment}>
@@ -295,7 +302,7 @@ export default function BasketPage() {
             <div className="py-8 text-center space-y-3">
               <Loader2 className="h-12 w-12 animate-spin mx-auto text-gray-400 dark:text-gray-500" />
               <p className="font-medium">Processing your payment...</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Please don't close this window</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">You will be redirected to Stripe's secure checkout.</p>
             </div>
           )}
 
