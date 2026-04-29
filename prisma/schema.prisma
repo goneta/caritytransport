@@ -38,6 +38,7 @@ model User {
   basketItems       BasketItem[]
   supportTickets    SupportTicket[]
   ticketReplies     TicketReply[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Session {
@@ -367,6 +368,21 @@ model Notification {
   triggerEvent String?
   read        Boolean   @default(false)
   sentAt      DateTime  @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, active])
 }
 
 model ChatMessage {

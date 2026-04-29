@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 
 import prisma from '@/lib/prisma'
 import { generateIdentityCode } from '@/lib/identity-code'
+import { dispatchNotification } from '@/lib/notifications'
 
 async function resolveManualIdentityCode(code: string) {
   const normalized = code.trim().toUpperCase()
@@ -77,6 +78,10 @@ export async function POST(req: NextRequest) {
           where: {
             status: 'ACTIVE',
             ...(scheduleId ? { scheduleId } : {})
+          },
+          include: {
+            booking: { select: { userId: true } },
+            schedule: { select: { routeName: true, departureTime: true } }
           }
         }
       }
@@ -91,8 +96,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine if pupil is booked on this schedule
+    const activeBookingItem = scheduleId
+      ? pupil.bookingItems.find((bookingItem) => bookingItem.scheduleId === scheduleId)
+      : pupil.bookingItems[0]
     const hasBooking = scheduleId
-      ? pupil.bookingItems.some((b: any) => b.scheduleId === scheduleId)
+      ? Boolean(activeBookingItem)
       : pupil.seatAssignments.length > 0
 
     const outcome = hasBooking ? 'green' : 'red'
@@ -111,12 +119,28 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    if (hasBooking && activeBookingItem?.booking.userId) {
+      const routeName = activeBookingItem.schedule?.routeName || pupil.seatAssignments[0]?.schedule.routeName || 'the selected route'
+      await dispatchNotification({
+        recipientId: activeBookingItem.booking.userId,
+        type: 'PUSH',
+        subject: `${pupil.fullName} boarded`,
+        message: `${pupil.fullName} has boarded ${routeName}${activeBookingItem.schedule?.departureTime ? ` at ${activeBookingItem.schedule.departureTime}` : ''}.`,
+        triggerEvent: 'QR_BOARDED'
+      })
+    }
+
     return NextResponse.json({
       valid: true,
       outcome,
       message: hasBooking
         ? `✓ ${pupil.fullName} is booked on this route`
         : `✗ ${pupil.fullName} does NOT have an active booking`,
+      scan: {
+        boardingRecorded: hasBooking,
+        routeId: scheduleId || null,
+        notifiedParent: Boolean(hasBooking && activeBookingItem?.booking.userId)
+      },
       pupil: {
         id: pupil.id,
         fullName: pupil.fullName,

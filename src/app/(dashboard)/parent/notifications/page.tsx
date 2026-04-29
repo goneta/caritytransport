@@ -50,6 +50,7 @@ export default function ParentNotificationsPage() {
     SMS: <Smartphone className="h-4 w-4 text-blue-600" />,
     EMAIL: <Mail className="h-4 w-4 text-green-600" />,
     IN_APP: <Bell className="h-4 w-4 text-purple-600" />,
+    PUSH: <Bell className="h-4 w-4 text-amber-600" />,
   }
 
   const unreadCount = notifications.filter(n => !n.read).length

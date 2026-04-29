@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
@@ -6,15 +7,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Bell, Shield, Save, Phone } from "lucide-react"
+import { User, Bell, Shield, Save, Phone, Loader2 } from "lucide-react"
 import AvatarUpload from "@/components/ui/avatar-upload"
 import toast from "react-hot-toast"
+
+interface PushStatus {
+  publicKey: string | null
+  configured: boolean
+  subscribed: boolean
+  notifyPush: boolean
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+
+  return outputArray
+}
 
 export default function ParentSettingsPage() {
   const { data: session, update } = useSession()
   const [name, setName] = useState(session?.user?.name || "")
   const [phone, setPhone] = useState("")
   const [saving, setSaving] = useState(false)
+  const [pushStatus, setPushStatus] = useState<PushStatus | null>(null)
+  const [pushLoading, setPushLoading] = useState(false)
   const [notifications, setNotifications] = useState({
     sms: true,
     email: true,
@@ -24,6 +47,14 @@ export default function ParentSettingsPage() {
   useEffect(() => {
     if (session?.user?.name) setName(session.user.name)
   }, [session?.user?.name])
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+    fetch("/api/parent/push-subscriptions")
+      .then((res) => res.json())
+      .then((data) => setPushStatus(data))
+      .catch(() => setPushStatus(null))
+  }, [session?.user?.id])
 
   async function saveProfile() {
     if (!name.trim()) {
@@ -48,6 +79,94 @@ export default function ParentSettingsPage() {
       toast.error("Failed to update profile")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function enablePushNotifications() {
+    if (!pushStatus?.configured || !pushStatus.publicKey) {
+      toast.error("Push notifications are not configured on this deployment")
+      return
+    }
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      toast.error("This browser does not support push notifications")
+      return
+    }
+
+    setPushLoading(true)
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== "granted") {
+        toast.error("Notification permission was not granted")
+        return
+      }
+
+      const registration = await navigator.serviceWorker.register("/sw.js")
+      const existing = await registration.pushManager.getSubscription()
+      const subscription = existing || await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(pushStatus.publicKey),
+      })
+
+      const res = await fetch("/api/parent/push-subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription.toJSON()),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Unable to save push subscription")
+      }
+
+      const updated = await res.json()
+      setPushStatus((prev) => ({
+        publicKey: prev?.publicKey || pushStatus.publicKey,
+        configured: prev?.configured ?? true,
+        subscribed: updated.subscribed,
+        notifyPush: updated.notifyPush,
+      }))
+      toast.success("Push notifications enabled")
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to enable push notifications")
+    } finally {
+      setPushLoading(false)
+    }
+  }
+
+  async function disablePushNotifications() {
+    setPushLoading(true)
+    try {
+      let endpoint = ""
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration("/sw.js")
+        const subscription = await registration?.pushManager.getSubscription()
+        endpoint = subscription?.endpoint || ""
+        await subscription?.unsubscribe()
+      }
+
+      const res = await fetch("/api/parent/push-subscriptions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Unable to disable push notifications")
+      }
+
+      const updated = await res.json()
+      setPushStatus((prev) => ({
+        publicKey: prev?.publicKey || null,
+        configured: prev?.configured ?? false,
+        subscribed: updated.subscribed,
+        notifyPush: updated.notifyPush,
+      }))
+      toast.success("Push notifications disabled")
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to disable push notifications")
+    } finally {
+      setPushLoading(false)
     }
   }
 
@@ -132,6 +251,27 @@ export default function ParentSettingsPage() {
                 </button>
               </div>
             ))}
+
+            <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+              <div>
+                <p className="font-medium text-sm">Push Notifications</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Receive browser alerts when trips start, boarding is scanned, or route progress changes.
+                </p>
+                {pushStatus && !pushStatus.configured && (
+                  <p className="text-xs text-amber-600 mt-1">Push delivery requires VAPID keys in the deployment environment.</p>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant={pushStatus?.subscribed ? "secondary" : "default"}
+                onClick={pushStatus?.subscribed ? disablePushNotifications : enablePushNotifications}
+                disabled={pushLoading || !pushStatus || !pushStatus.configured}
+              >
+                {pushLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                {pushStatus?.subscribed ? "Disable" : "Enable"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

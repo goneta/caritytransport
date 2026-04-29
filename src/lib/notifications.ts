@@ -5,13 +5,16 @@
  * - In-App (always)
  * - SMS via Twilio (when configured)
  * - Email via SendGrid (when configured)
+ * - Browser Push via Web Push/VAPID (when configured)
  *
  * Environment variables required:
  * - TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
  * - SENDGRID_API_KEY, SENDGRID_FROM_EMAIL
+ * - NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
  */
 
 import prisma from '@/lib/prisma'
+import { isWebPushConfigured, sendPushToUser } from '@/lib/push'
 
 // ─── Types ───
 
@@ -31,6 +34,7 @@ interface RecipientInfo {
   phone: string | null
   notifySMS: boolean
   notifyEmail: boolean
+  notifyPush: boolean
 }
 
 // ─── Configuration Check ───
@@ -179,6 +183,7 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
       phone: true,
       notifySMS: true,
       notifyEmail: true,
+      notifyPush: true,
     },
   }) as RecipientInfo | null
 
@@ -220,6 +225,16 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     if (!emailResult.success) {
       console.warn(`Email failed for ${recipientId}: ${emailResult.error}`)
     }
+  }
+
+  // 6. Send browser push if user opted in and VAPID is configured
+  if (recipient.notifyPush && isWebPushConfigured()) {
+    await sendPushToUser(recipient.id, {
+      title: subject || `Carity: ${type.replace(/_/g, ' ')}`,
+      body: message,
+      url: '/parent/notifications',
+      tag: triggerEvent || type,
+    })
   }
 }
 
@@ -269,6 +284,7 @@ async function dispatchExternalOnly(payload: NotificationPayload): Promise<void>
       phone: true,
       notifySMS: true,
       notifyEmail: true,
+      notifyPush: true,
     },
   }) as RecipientInfo | null
 
@@ -301,6 +317,15 @@ async function dispatchExternalOnly(payload: NotificationPayload): Promise<void>
 
   if (recipient.notifyEmail && recipient.email && isSendGridConfigured()) {
     await sendEmail(recipient.email, emailSubject, emailHtml, message)
+  }
+
+  if (recipient.notifyPush && isWebPushConfigured()) {
+    await sendPushToUser(recipient.id, {
+      title: subject || `Carity: ${type.replace(/_/g, ' ')}`,
+      body: message,
+      url: '/parent/notifications',
+      tag: triggerEvent || type,
+    })
   }
 }
 

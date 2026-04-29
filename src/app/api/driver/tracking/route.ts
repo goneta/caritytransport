@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { dispatchNotification } from '@/lib/notifications'
 
 const ALLOWED_STATUSES = new Set([
   'ROUTE_SCHEDULED',
@@ -59,7 +60,32 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ success: true, tracking: log })
+    const activeParents = await prisma.bookingItem.findMany({
+      where: {
+        scheduleId,
+        status: 'ACTIVE',
+        booking: { status: 'CONFIRMED' },
+      },
+      select: {
+        pupil: { select: { fullName: true } },
+        booking: { select: { userId: true } },
+      },
+      distinct: ['bookingId'],
+    })
+
+    const statusLabel = status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+    const routeName = log.schedule?.routeName || 'your child’s route'
+    await Promise.allSettled(
+      activeParents.map((item) => dispatchNotification({
+        recipientId: item.booking.userId,
+        type: 'PUSH',
+        subject: `Trip update: ${statusLabel}`,
+        message: `${routeName} is now ${statusLabel}. ${log.vehicle?.regPlate ? `Vehicle: ${log.vehicle.regPlate}. ` : ''}${latitude !== null && longitude !== null ? `Live location has been updated. ` : ''}${item.pupil ? `Passenger: ${item.pupil.fullName}.` : ''}`,
+        triggerEvent: `TRACKING_${status}`,
+      }))
+    )
+
+    return NextResponse.json({ success: true, tracking: log, notifiedParents: activeParents.length })
   } catch (error) {
     console.error('Driver tracking update error:', error)
     return NextResponse.json({ error: 'Failed to update live tracking' }, { status: 500 })

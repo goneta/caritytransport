@@ -9,6 +9,7 @@ import Link from "next/link"
 import { formatDate } from "@/lib/utils"
 import { useSession } from "next-auth/react"
 import UserQRCard from "@/components/shared/user-qr-card"
+import LiveOperationsMap from "@/components/admin/live-operations-map"
 
 interface DashboardData {
   metrics: {
@@ -89,6 +90,8 @@ export default function AdminDashboard() {
             </Link>
           ))}
         </div>
+
+        <LiveOperationsMap />
 
         {/* Identity QR Code */}
         <div className="grid lg:grid-cols-4 gap-6">

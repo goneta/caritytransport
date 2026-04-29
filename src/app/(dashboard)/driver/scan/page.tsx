@@ -18,13 +18,30 @@ import {
   AlertTriangle,
   Camera,
   Keyboard,
-  RotateCcw
+  RotateCcw,
+  Video,
+  VideoOff
 } from 'lucide-react'
+
+type BarcodeDetectorResult = { rawValue?: string }
+type BarcodeDetectorInstance = { detect: (source: CanvasImageSource) => Promise<BarcodeDetectorResult[]> }
+type BarcodeDetectorConstructor = new (options: { formats: string[] }) => BarcodeDetectorInstance
+
+declare global {
+  interface Window {
+    BarcodeDetector?: BarcodeDetectorConstructor
+  }
+}
 
 interface ScanResult {
   valid: boolean
   outcome: 'green' | 'red'
   message: string
+  scan?: {
+    boardingRecorded: boolean
+    routeId: string | null
+    notifiedParent: boolean
+  }
   pupil?: {
     id: string
     fullName: string
@@ -52,10 +69,24 @@ export default function DriverScanPage() {
   const [manualInput, setManualInput] = useState('')
   const [result, setResult] = useState<ScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
   const [history, setHistory] = useState<Array<{ result: ScanResult; time: string }>>([])
   const inputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const cameraLoopRef = useRef<number | null>(null)
+  const processingRef = useRef(false)
 
   useEffect(() => { fetchSchedules() }, [])
+
+  useEffect(() => {
+    if (scanMode !== 'camera') {
+      stopCamera()
+      return
+    }
+    return () => stopCamera()
+  }, [scanMode])
 
   async function fetchSchedules() {
     try {
@@ -71,7 +102,8 @@ export default function DriverScanPage() {
   }
 
   async function processQrData(rawData: string) {
-    if (!rawData.trim()) return
+    if (!rawData.trim() || processingRef.current) return
+    processingRef.current = true
     setScanning(true)
     setResult(null)
     try {
@@ -87,6 +119,7 @@ export default function DriverScanPage() {
       setResult(data)
       setHistory(prev => [{ result: data, time: new Date().toLocaleTimeString('en-GB') }, ...prev.slice(0, 9)])
       setManualInput('')
+      if (data.outcome === 'green') stopCamera()
     } catch {
       setResult({
         valid: false,
@@ -95,7 +128,56 @@ export default function DriverScanPage() {
       })
     } finally {
       setScanning(false)
+      processingRef.current = false
     }
+  }
+
+  async function startCamera() {
+    setCameraError(null)
+    if (!window.BarcodeDetector) {
+      setCameraError('This browser does not support native camera QR detection. Use manual mode or a USB scanner on this device.')
+      return
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Camera access is not available on this device. Use manual mode or a USB scanner.')
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+      setCameraActive(true)
+      const detector = new window.BarcodeDetector({ formats: ['qr_code'] })
+      cameraLoopRef.current = window.setInterval(async () => {
+        if (!videoRef.current || processingRef.current) return
+        try {
+          const codes = await detector.detect(videoRef.current)
+          const rawValue = codes[0]?.rawValue
+          if (rawValue) await processQrData(rawValue)
+        } catch (error) {
+          console.error('Camera QR detection error:', error)
+        }
+      }, 800)
+    } catch (error) {
+      console.error(error)
+      setCameraError('Camera permission was denied or the camera could not be opened. Please allow camera access or use manual mode.')
+      stopCamera()
+    }
+  }
+
+  function stopCamera() {
+    if (cameraLoopRef.current) {
+      window.clearInterval(cameraLoopRef.current)
+      cameraLoopRef.current = null
+    }
+    streamRef.current?.getTracks().forEach(track => track.stop())
+    streamRef.current = null
+    if (videoRef.current) videoRef.current.srcObject = null
+    setCameraActive(false)
   }
 
   function handleManualSubmit(e: React.FormEvent) {
@@ -106,7 +188,7 @@ export default function DriverScanPage() {
   function reset() {
     setResult(null)
     setManualInput('')
-    inputRef.current?.focus()
+    if (scanMode === 'manual') inputRef.current?.focus()
   }
 
   return (
@@ -114,7 +196,7 @@ export default function DriverScanPage() {
       <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">QR Boarding Scanner</h1>
-          <p className="text-slate-500">Scan pupil QR codes to verify booking status</p>
+          <p className="text-slate-500">Scan pupil QR codes to verify booking status and record boarding</p>
         </div>
 
         <Card>
@@ -170,7 +252,7 @@ export default function DriverScanPage() {
                     ref={inputRef}
                     value={manualInput}
                     onChange={e => setManualInput(e.target.value)}
-                    placeholder='Scan QR code, paste JSON data, or enter the 20-character identity code...'
+                    placeholder="Scan QR code, paste JSON data, or enter the 20-character identity code..."
                     className="font-mono text-sm"
                     autoFocus
                   />
@@ -197,24 +279,44 @@ export default function DriverScanPage() {
 
         {scanMode === 'camera' && (
           <Card>
-            <CardContent className="pt-4">
-              <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-8 text-center border-2 border-dashed border-slate-300">
-                <Camera className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <p className="text-slate-600 dark:text-slate-400 font-medium">Camera QR scanning</p>
-                <p className="text-sm text-slate-400 mt-1">
-                  Point the camera at the pupil&apos;s QR code
-                </p>
-                <p className="text-xs text-amber-600 mt-3">
-                  Note: Camera scanning requires a compatible device. Use manual mode with a USB QR scanner for best results.
-                </p>
-                <Button
-                  className="mt-4"
-                  onClick={() => setScanMode('manual')}
-                  variant="outline"
-                >
-                  Switch to Manual Mode
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Camera className="w-5 h-5" /> Camera QR Scanner
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative overflow-hidden rounded-lg bg-slate-950 aspect-video border border-slate-200 dark:border-slate-800">
+                <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+                {!cameraActive && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-white/80">
+                    <Camera className="w-12 h-12 mb-3" />
+                    <p className="font-medium">Start the camera and point it at the pupil QR code.</p>
+                    <p className="text-xs mt-1 text-white/60">The scan will verify the booking, record boarding, and notify the parent when successful.</p>
+                  </div>
+                )}
+                {cameraActive && (
+                  <div className="absolute inset-8 border-2 border-white/80 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
+                )}
+              </div>
+
+              {cameraError && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 flex gap-2">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{cameraError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button onClick={startCamera} disabled={cameraActive || scanning} className="flex-1">
+                  <Video className="w-4 h-4 mr-2" /> Start Camera
+                </Button>
+                <Button onClick={stopCamera} disabled={!cameraActive} variant="outline" className="flex-1">
+                  <VideoOff className="w-4 h-4 mr-2" /> Stop
                 </Button>
               </div>
+              <Button onClick={() => setScanMode('manual')} variant="ghost" className="w-full">
+                Switch to Manual / USB Scanner
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -231,6 +333,11 @@ export default function DriverScanPage() {
                 <p className={`text-lg font-bold ${result.outcome === 'green' ? 'text-green-700' : 'text-red-700'}`}>
                   {result.message}
                 </p>
+                {result.scan?.boardingRecorded && (
+                  <p className="text-xs text-green-700 mt-2">
+                    Boarding recorded{result.scan.notifiedParent ? ' and parent notification queued.' : '.'}
+                  </p>
+                )}
               </div>
 
               {result.pupil && (
@@ -261,10 +368,7 @@ export default function DriverScanPage() {
                   </div>
 
                   {result.pupil.parentPhone && (
-                    <a
-                      href={`tel:${result.pupil.parentPhone}`}
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
-                    >
+                    <a href={`tel:${result.pupil.parentPhone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
                       <Phone className="w-4 h-4" />
                       {result.pupil.parentPhone}
                     </a>
@@ -278,10 +382,7 @@ export default function DriverScanPage() {
                   )}
 
                   {result.pupil.pupilPhone && (
-                    <a
-                      href={`tel:${result.pupil.pupilPhone}`}
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
-                    >
+                    <a href={`tel:${result.pupil.pupilPhone}`} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
                       <Phone className="w-4 h-4" />
                       Pupil: {result.pupil.pupilPhone}
                     </a>
