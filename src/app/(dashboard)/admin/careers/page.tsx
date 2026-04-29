@@ -913,8 +913,9 @@ export default function AdminCareersPage() {
 
       {/* ═══════════════ INTERVIEW SCHEDULING MODAL ═══════════════ */}
       {interviewModal && (
-        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[60] bg-black/50 overflow-y-auto">
+          <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full max-h-[calc(100vh-2rem)] overflow-y-auto my-4">
             <div className="p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">Schedule Interview</h3>
@@ -983,13 +984,15 @@ export default function AdminCareersPage() {
               </div>
             </div>
           </div>
+          </div>
         </div>
       )}
 
       {/* ═══════════════ HIRE MODAL ═══════════════ */}
       {hireModal && (
-        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[60] bg-black/50 overflow-y-auto">
+          <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full max-h-[calc(100vh-2rem)] overflow-y-auto my-4">
             <div className="p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">Hire Candidate</h3>
@@ -1053,13 +1056,15 @@ export default function AdminCareersPage() {
               </div>
             </div>
           </div>
+          </div>
         </div>
       )}
 
       {/* ═══════════════ CREDENTIALS MODAL ═══════════════ */}
       {credentialsModal && (
-        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full">
+        <div className="fixed inset-0 z-[70] bg-black/50 overflow-y-auto">
+          <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full max-h-[calc(100vh-2rem)] overflow-y-auto my-4">
             <div className="p-6 space-y-5">
               <div className="text-center">
                 <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
@@ -1109,6 +1114,7 @@ export default function AdminCareersPage() {
                 </Button>
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}

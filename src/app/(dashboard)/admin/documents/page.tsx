@@ -311,8 +311,9 @@ export default function DocumentsPage() {
 
         {/* Upload Modal */}
         {uploadType && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setUploadType(null); setSelectedEntityId("") }}>
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto" onClick={() => { setUploadType(null); setSelectedEntityId("") }}>
+            <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md p-6 max-h-[calc(100vh-2rem)] overflow-y-auto my-4" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-lg">
                   Upload {uploadDocDef?.type || "Document"}
@@ -397,14 +398,16 @@ export default function DocumentsPage() {
                   }}
                 />
               </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* View All Modal */}
         {viewType && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewType(null)}>
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl mx-4 p-6 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto" onClick={() => setViewType(null)}>
+            <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden my-4" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-lg">
                   {DOC_TYPES.find(d => d.key === viewType)?.type || "Documents"}
@@ -513,6 +516,7 @@ export default function DocumentsPage() {
                   </Button>
                 </div>
               )}
+              </div>
             </div>
           </div>
         )}

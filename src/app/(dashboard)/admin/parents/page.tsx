@@ -125,19 +125,14 @@ export default function ParentsPage() {
               <p className="text-center text-gray-500 py-8 col-span-full">No parents found</p>
             ) : parents.map(parent => (
               <Card key={parent.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold">{parent.name?.charAt(0)}</div>
-                      <div>
+                      <div className="min-w-0">
                         <button onClick={() => { setSelectedParent(parent); setShowViewDialog(true) }} className="font-semibold text-sm hover:underline text-left">{parent.name}</button>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{parent.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 break-all">{parent.email}</p>
                       </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedParent(parent); setShowViewDialog(true) }}><Eye className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setEditForm({...parent}); setShowEdit(true) }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setDeleteTarget(parent); setShowDelete(true) }}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
@@ -147,6 +142,17 @@ export default function ParentsPage() {
                   <div className="flex items-center justify-between">
                     <Badge variant={statusColor[parent.status] as any || "secondary"}>{parent.status}</Badge>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(parent.createdAt)}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedParent(parent); setShowViewDialog(true) }} className="w-full">
+                      <Eye className="h-4 w-4 mr-1" /> View
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setEditForm({...parent}); setShowEdit(true) }} className="w-full">
+                      <Pencil className="h-4 w-4 mr-1" /> Edit
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setDeleteTarget(parent); setShowDelete(true) }} className="w-full text-red-600 border-red-200 hover:bg-red-50">
+                      <Trash2 className="h-4 w-4 mr-1" /> Delete
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -211,7 +217,7 @@ export default function ParentsPage() {
       </div>
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>Add Parent</DialogTitle></DialogHeader>
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -267,7 +273,7 @@ export default function ParentsPage() {
                       <div key={p.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div>
                           <p className="font-medium text-sm">{p.fullName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{p.yearLevel} · {p.school?.name || 'No school'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{p.yearLevel} - {p.school?.name || 'No school'}</p>
                         </div>
                         <Badge variant={p.activeTransport ? "success" : "secondary"}>
                           {p.activeTransport ? "Active Transport" : "No Transport"}
@@ -283,7 +289,7 @@ export default function ParentsPage() {
       </Dialog>
 
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent><DialogHeader><DialogTitle>Edit Parent</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-xl"><DialogHeader><DialogTitle>Edit Parent</DialogTitle></DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1"><Label>Name</Label><Input value={editForm.name || ""} onChange={e => setEditForm((p: any) => ({ ...p, name: e.target.value }))} /></div>

@@ -13,24 +13,29 @@ export default function AttendancePage() {
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null)
   const [attendance, setAttendance] = useState<Record<string, 'BOARDED' | 'ABSENT'>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [loadingSchedule, setLoadingSchedule] = useState(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("/api/admin/schedules")
+    fetch("/api/driver/schedule")
       .then(r => r.json())
-      .then(d => setSchedules(Array.isArray(d) ? d : []))
+      .then(d => setSchedules(Array.isArray(d?.schedules) ? d.schedules : []))
   }, [])
 
   const loadSchedule = (id: string) => {
-    fetch(`/api/admin/schedules/${id}`)
+    setLoadingSchedule(true)
+    fetch(`/api/driver/attendance?scheduleId=${id}`)
       .then(r => r.json())
       .then(d => {
-        setSelectedSchedule(d)
+        setSelectedSchedule(d.schedule)
         const initial: Record<string, 'BOARDED' | 'ABSENT'> = {}
-        d.seatAssignments?.filter((a: any) => a.status === 'ASSIGNED').forEach((a: any) => {
-          initial[a.pupilId] = 'BOARDED'
+        d.schedule?.seatAssignments?.filter((a: any) => a.status === 'ASSIGNED').forEach((a: any) => {
+          initial[a.pupilId] = d.attendance?.[a.pupilId] === 'ABSENT' ? 'ABSENT' : 'BOARDED'
         })
         setAttendance(initial)
+        setSavedAt(d.savedAt || null)
       })
+      .finally(() => setLoadingSchedule(false))
   }
 
   const toggleAttendance = (pupilId: string) => {
@@ -42,10 +47,27 @@ export default function AttendancePage() {
 
   const submitAttendance = () => {
     setSubmitting(true)
-    setTimeout(() => {
-      toast.success(`Attendance confirmed: ${Object.values(attendance).filter(v => v === 'BOARDED').length} boarded, ${Object.values(attendance).filter(v => v === 'ABSENT').length} absent`)
-      setSubmitting(false)
-    }, 1000)
+    fetch("/api/driver/attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scheduleId: selectedSchedule?.id,
+        attendance,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => null)
+          throw new Error(data?.error || "Failed to save attendance")
+        }
+        return res.json()
+      })
+      .then((data) => {
+        setSavedAt(data.savedAt || new Date().toISOString())
+        toast.success(`Attendance confirmed: ${Object.values(attendance).filter(v => v === 'BOARDED').length} boarded, ${Object.values(attendance).filter(v => v === 'ABSENT').length} absent`)
+      })
+      .catch((error) => toast.error(error.message))
+      .finally(() => setSubmitting(false))
   }
 
   return (
@@ -72,13 +94,21 @@ export default function AttendancePage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Attendance for {selectedSchedule.routeName}</CardTitle>
-                <div className="flex gap-2 text-sm">
-                  <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-4 w-4" />{Object.values(attendance).filter(v => v === 'BOARDED').length} Boarded</span>
-                  <span className="flex items-center gap-1 text-red-600"><XCircle className="h-4 w-4" />{Object.values(attendance).filter(v => v === 'ABSENT').length} Absent</span>
+                <div className="flex flex-col items-end gap-1 text-sm">
+                  <div className="flex gap-2 text-sm">
+                    <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-4 w-4" />{Object.values(attendance).filter(v => v === 'BOARDED').length} Boarded</span>
+                    <span className="flex items-center gap-1 text-red-600"><XCircle className="h-4 w-4" />{Object.values(attendance).filter(v => v === 'ABSENT').length} Absent</span>
+                  </div>
+                  {savedAt && <span className="text-xs text-gray-500 dark:text-gray-400">Saved {new Date(savedAt).toLocaleString("en-GB")}</span>}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
+              {loadingSchedule && (
+                <div className="flex items-center justify-center h-16">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              )}
               {selectedSchedule.seatAssignments?.filter((a: any) => a.status === 'ASSIGNED').map((a: any) => (
                 <div
                   key={a.id}
@@ -103,7 +133,7 @@ export default function AttendancePage() {
                 </div>
               ))}
 
-              <Button className="w-full mt-4" onClick={submitAttendance} disabled={submitting}>
+              <Button className="w-full mt-4" onClick={submitAttendance} disabled={submitting || loadingSchedule || !selectedSchedule?.id}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Attendance & Start Route"}
               </Button>
             </CardContent>

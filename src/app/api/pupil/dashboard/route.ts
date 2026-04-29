@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
 import prisma from '@/lib/prisma'
+import { generateIdentityCode } from '@/lib/identity-code'
 
 export async function GET(req: NextRequest) {
   try {
@@ -112,7 +113,8 @@ export async function GET(req: NextRequest) {
         school: pupil.school,
         pickupLocation: pupil.pickupLocation,
         specialRequirements: pupil.specialRequirements,
-        qrCodeData
+        qrCodeData,
+        identityCode: generateIdentityCode('PUPIL', pupil.id, pupil.platformId)
       },
       upcomingTrips,
       tripHistory: pupil.tripLogs,

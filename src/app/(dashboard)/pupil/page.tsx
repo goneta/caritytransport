@@ -32,6 +32,7 @@ interface PupilData {
   pickupLocation: string | null
   specialRequirements: string | null
   qrCodeData: string
+  identityCode: string
 }
 
 interface TripItem {
@@ -193,6 +194,10 @@ export default function PupilDashboard() {
                     <p className="font-semibold text-slate-900 dark:text-white">{pupil.fullName}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{pupil.studentNumber || pupil.platformId}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-400">{pupil.school?.name}</p>
+                    <div className="mt-2">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Manual identity code</p>
+                      <p className="font-mono text-sm tracking-[0.18em] text-slate-900 dark:text-white">{pupil.identityCode}</p>
+                    </div>
                   </div>
                   <Button
                     variant="outline"

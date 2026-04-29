@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
 import prisma from '@/lib/prisma'
+import { generateIdentityCode } from '@/lib/identity-code'
+
+async function resolveManualIdentityCode(code: string) {
+  const normalized = code.trim().toUpperCase()
+
+  const pupils = await prisma.pupil.findMany({
+    select: { id: true, platformId: true }
+  })
+  const pupilMatch = pupils.find((pupil) => generateIdentityCode('PUPIL', pupil.id, pupil.platformId) === normalized)
+  if (pupilMatch) {
+    return { type: 'PUPIL' as const, pupilId: pupilMatch.id }
+  }
+
+  const users = await prisma.user.findMany({
+    select: { id: true, platformId: true }
+  })
+  const userMatch = users.find((user) => generateIdentityCode('USER', user.id, user.platformId) === normalized)
+  if (userMatch) {
+    return { type: 'USER' as const, userId: userMatch.id }
+  }
+
+  return null
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +43,15 @@ export async function POST(req: NextRequest) {
     try {
       payload = typeof qrData === 'string' ? JSON.parse(qrData) : qrData
     } catch {
-      return NextResponse.json({ error: 'Invalid QR data format', valid: false }, { status: 400 })
+      const manualMatch = await resolveManualIdentityCode(String(qrData))
+      if (!manualMatch || manualMatch.type !== 'PUPIL') {
+        return NextResponse.json({ error: 'Invalid QR data format', valid: false }, { status: 400 })
+      }
+      payload = {
+        type: 'PUPIL',
+        pupilId: manualMatch.pupilId,
+        identityCode: String(qrData).trim().toUpperCase(),
+      }
     }
 
     if (payload.type !== 'PUPIL') {
@@ -89,6 +120,7 @@ export async function POST(req: NextRequest) {
       pupil: {
         id: pupil.id,
         fullName: pupil.fullName,
+        identityCode: generateIdentityCode('PUPIL', pupil.id, pupil.platformId),
         yearLevel: pupil.yearLevel,
         school: pupil.school?.name,
         specialRequirements: pupil.specialRequirements,

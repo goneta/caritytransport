@@ -198,8 +198,9 @@ export default function SchoolsPage() {
       </Dialog>
 
       {showDelete && deleteTarget && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl text-gray-900 dark:text-gray-100 max-w-sm w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto">
+          <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl text-gray-900 dark:text-gray-100 max-w-sm w-full p-6 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto my-4">
             <h3 className="text-lg font-bold">Confirm Delete</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.</p>
             <div className="flex gap-3 justify-end">
@@ -213,13 +214,15 @@ export default function SchoolsPage() {
                 } catch { toast.error('Failed to delete') }
               }}>Delete</Button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {showView && viewTarget && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowView(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl text-gray-900 dark:text-gray-100 max-w-lg w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto" onClick={() => setShowView(false)}>
+          <div className="min-h-full flex items-start justify-center p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl text-gray-900 dark:text-gray-100 max-w-lg w-full p-6 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto my-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">School Details</h3>
               <button onClick={() => setShowView(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">&times;</button>
@@ -235,6 +238,7 @@ export default function SchoolsPage() {
               <div><span className="text-gray-500 dark:text-gray-400 block">Pupils</span><span className="font-medium">{viewTarget._count?.pupils || 0}</span></div>
               <div><span className="text-gray-500 dark:text-gray-400 block">Routes</span><span className="font-medium">{viewTarget._count?.schedules || 0}</span></div>
               <div><span className="text-gray-500 dark:text-gray-400 block">Status</span><span className="font-medium">{viewTarget.status || 'N/A'}</span></div>
+            </div>
             </div>
           </div>
         </div>

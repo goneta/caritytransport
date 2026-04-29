@@ -17,11 +17,17 @@ export default function SettingsPage() {
   const [name, setName] = useState(session?.user?.name || "")
   const [saving, setSaving] = useState(false)
   const [channelStatus, setChannelStatus] = useState<{ twilio: boolean; sendgrid: boolean; inApp: boolean } | null>(null)
+  const [aiStatus, setAiStatus] = useState<{ provider: string; model: string; configured: boolean; recommended: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/notification-status')
       .then(r => r.json())
       .then(d => setChannelStatus(d))
+      .catch(() => {})
+
+    fetch('/api/admin/ai-status')
+      .then(r => r.json())
+      .then(d => setAiStatus(d))
       .catch(() => {})
   }, [])
 
@@ -190,6 +196,38 @@ export default function SettingsPage() {
                 When a notification is triggered (e.g. route change, absence report), the system checks each
                 recipient&apos;s preferences. If SMS is enabled and Twilio is configured, an SMS is sent. If email
                 is enabled and SendGrid is configured, an email is sent. In-app notifications are always created.
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5" />AI Chatbot Configuration</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800">
+              <div>
+                <span className="font-medium">Model API Status</span>
+                <span className="block text-sm text-gray-500 dark:text-gray-400">
+                  Provider-based chatbot integration for Anthropic or OpenAI
+                </span>
+                {aiStatus && (
+                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Provider: {aiStatus.provider} · Model: {aiStatus.model}
+                  </span>
+                )}
+              </div>
+              {aiStatus?.configured
+                ? <Badge variant="success"><CheckCircle className="h-3 w-3 mr-1 inline" />Configured</Badge>
+                : <Badge variant="warning"><AlertCircle className="h-3 w-3 mr-1 inline" />Missing API Key</Badge>
+              }
+            </div>
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-100 dark:border-blue-800 rounded-lg">
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Recommended approach</span>
+              <span className="block text-sm text-blue-700 dark:text-blue-300 mt-1">
+                Store provider API keys in <code className="font-mono">.env.local</code> for security. Use the admin panel to surface status and future non-secret options such as provider selection, model name, or feature toggles.
+              </span>
+              <span className="block text-xs text-blue-700 dark:text-blue-300 mt-3">
+                Supported environment variables: <code className="font-mono">AI_PROVIDER</code>, <code className="font-mono">AI_MODEL</code>, <code className="font-mono">ANTHROPIC_API_KEY</code>, and <code className="font-mono">OPENAI_API_KEY</code>.
               </span>
             </div>
           </CardContent>

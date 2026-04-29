@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 
 import prisma from '@/lib/prisma'
 import QRCode from 'qrcode'
+import { generateIdentityCode } from '@/lib/identity-code'
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
       qrPayload = {
         type: 'PUPIL',
         pupilId: pupil.id,
+        identityCode: generateIdentityCode('PUPIL', pupil.id, pupil.platformId),
         platformId: pupil.platformId,
         fullName: pupil.fullName,
         dateOfBirth: pupil.dateOfBirth?.toISOString() || null,
@@ -70,6 +72,7 @@ export async function GET(req: NextRequest) {
       qrPayload = {
         type: 'USER',
         userId: user.id,
+        identityCode: generateIdentityCode('USER', user.id, user.platformId),
         platformId: user.platformId,
         name: user.name,
         email: user.email,
@@ -98,7 +101,11 @@ export async function GET(req: NextRequest) {
       color: { dark: '#1e293b', light: '#ffffff' }
     })
 
-    return NextResponse.json({ qrDataUrl, payload: qrPayload })
+    return NextResponse.json({
+      qrDataUrl,
+      payload: qrPayload,
+      identityCode: qrPayload.identityCode,
+    })
   } catch (error) {
     console.error('QR generation error:', error)
     return NextResponse.json({ error: 'Failed to generate QR code' }, { status: 500 })

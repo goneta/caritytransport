@@ -13,6 +13,7 @@ interface UserQRCardProps {
 
 export default function UserQRCard({ userId, userName, type = "user", targetId }: UserQRCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>("")
+  const [identityCode, setIdentityCode] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -22,8 +23,12 @@ export default function UserQRCard({ userId, userName, type = "user", targetId }
     fetch(`/api/qr/generate?userId=${id}&type=${type}`)
       .then(r => r.json())
       .then(d => {
-        if (d.qrDataUrl) setQrDataUrl(d.qrDataUrl)
-        else setError(true)
+        if (d.qrDataUrl) {
+          setQrDataUrl(d.qrDataUrl)
+          setIdentityCode(d.identityCode || "")
+        } else {
+          setError(true)
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
@@ -63,12 +68,18 @@ export default function UserQRCard({ userId, userName, type = "user", targetId }
             </div>
             <div className="mt-3 text-center">
               <p className="font-semibold text-gray-900 dark:text-white">{userName}</p>
+              {identityCode && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Manual identity code</p>
+                  <p className="font-mono text-sm tracking-[0.18em] text-gray-900 dark:text-white">{identityCode}</p>
+                </div>
+              )}
             </div>
             <Button variant="outline" size="sm" className="mt-3" onClick={downloadQR}>
               <Download className="w-4 h-4 mr-2" /> Download QR
             </Button>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
-              Your unique identity QR code for the Carity platform
+              Your unique identity QR code and fallback manual verification code
             </p>
           </>
         )}

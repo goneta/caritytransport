@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getAIProviderConfig, requestAIResponse } from '@/lib/ai-provider'
 
 // --- Carity Company Knowledge Base ---
 const CARITY_INFO = `
@@ -114,38 +115,20 @@ Instructions:
 
     let aiResponse: string
 
-    // Try Anthropic API if key is configured
-    const anthropicKey = process.env.ANTHROPIC_API_KEY
-    if (anthropicKey && anthropicKey !== 'your-anthropic-api-key') {
+    const aiConfig = getAIProviderConfig()
+    if (aiConfig.configured) {
       try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': anthropicKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-5',
-            max_tokens: 1024,
-            messages: [{ role: 'user', content: prompt }],
-          }),
-        })
-
-        if (!response.ok) {
-          // API error (credit limit, rate limit, etc.) - fall back to rule-based
-          console.warn('Anthropic API error:', response.status, response.statusText)
+        const remoteResponse = await requestAIResponse(prompt)
+        if (!remoteResponse) {
           aiResponse = generateLocalResponse(message, userRole, userName, await fetchRawContextData(userId, userRole))
         } else {
-          const data = await response.json()
-          aiResponse = data.content?.[0]?.text || generateLocalResponse(message, userRole, userName, await fetchRawContextData(userId, userRole))
+          aiResponse = remoteResponse
         }
       } catch (err) {
-        console.warn('Anthropic API unavailable, using rule-based fallback:', err)
+        console.warn('AI provider unavailable, using rule-based fallback:', err)
         aiResponse = generateLocalResponse(message, userRole, userName, await fetchRawContextData(userId, userRole))
       }
     } else {
-      // No API key - use local rule-based responses
       aiResponse = generateLocalResponse(message, userRole, userName, await fetchRawContextData(userId, userRole))
     }
 

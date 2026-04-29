@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import DashboardLayout from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -72,13 +73,16 @@ export default function DriverTripsPage() {
 
   if (loading) {
     return (
+      <DashboardLayout title="My Trip Log">
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
       </div>
+      </DashboardLayout>
     )
   }
 
   return (
+    <DashboardLayout title="My Trip Log">
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">My Trip Log</h1>
@@ -214,5 +218,6 @@ export default function DriverTripsPage() {
         </CardContent>
       </Card>
     </div>
+    </DashboardLayout>
   )
 }
