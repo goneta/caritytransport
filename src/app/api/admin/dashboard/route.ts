@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { buildCapacityForecast } from '@/lib/capacity-forecasting'
 
 export async function GET() {
   try {
+    const forecastCutoff = new Date()
+    forecastCutoff.setDate(forecastCutoff.getDate() - 365)
+
     const [
       totalPupils,
       activeRoutes,
@@ -15,6 +19,8 @@ export async function GET() {
       fullVehicles,
       totalParents,
       todaySchedules,
+      forecastSchedules,
+      forecastBookingItems,
     ] = await Promise.all([
       prisma.pupil.count({ where: { status: 'ACTIVE', activeTransport: true } }),
       prisma.transportSchedule.count({ where: { status: { in: ['SCHEDULED', 'ACTIVE'] } } }),
@@ -62,14 +68,49 @@ export async function GET() {
         },
         take: 10,
       }),
+      prisma.transportSchedule.findMany({
+        where: { status: { in: ['SCHEDULED', 'ACTIVE', 'COMPLETED'] } },
+        select: {
+          id: true,
+          routeName: true,
+          direction: true,
+          serviceType: true,
+          departureTime: true,
+          status: true,
+          school: { select: { name: true } },
+          vehicle: { select: { seats: true } },
+          _count: { select: { seatAssignments: { where: { status: 'ASSIGNED' } } } },
+        },
+      }),
+      prisma.bookingItem.findMany({
+        where: {
+          tripDate: { gte: forecastCutoff, lte: new Date() },
+          status: { notIn: ['CANCELLED', 'REFUNDED', 'VOID'] },
+          booking: { status: { notIn: ['CANCELLED', 'REFUNDED', 'VOID'] } },
+        },
+        orderBy: { tripDate: 'desc' },
+        take: 5000,
+        include: {
+          booking: { select: { status: true } },
+          schedule: {
+            select: {
+              id: true,
+              routeName: true,
+              direction: true,
+              serviceType: true,
+              departureTime: true,
+              school: { select: { name: true } },
+            },
+          },
+        },
+      }),
     ])
 
-  const fullVehiclesAlert = fullVehicles.filter((s: any) => {
-    const assigned = s._count?.seatAssignments || 0
-    const capacity = s.vehicle?.seats || 0
-    return assigned >= capacity
-  }
-)
+    const fullVehiclesAlert = fullVehicles.filter((s: any) => {
+      const assigned = s._count?.seatAssignments || 0
+      const capacity = s.vehicle?.seats || 0
+      return assigned >= capacity
+    })
 
     return NextResponse.json({
       metrics: {
@@ -89,6 +130,7 @@ export async function GET() {
       todaySchedules,
       expiringLicences,
       expiringInsurance,
+      capacityForecast: buildCapacityForecast(forecastSchedules, forecastBookingItems),
     })
   } catch (error) {
     console.error(error)

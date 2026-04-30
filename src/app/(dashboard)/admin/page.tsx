@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, Bus, Route, UserCheck, AlertTriangle, Clock, CheckCircle, XCircle, ChevronRight } from "lucide-react"
+import { Users, Bus, Route, UserCheck, AlertTriangle, Clock, CheckCircle, XCircle, ChevronRight, BarChart3, TrendingDown, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { formatDate } from "@/lib/utils"
 import { useSession } from "next-auth/react"
@@ -29,6 +29,37 @@ interface DashboardData {
   todaySchedules: any[]
   expiringLicences: any[]
   expiringInsurance: any[]
+  capacityForecast?: {
+    generatedAt: string
+    planningTerm: string
+    lookbackDays: number
+    routesAnalyzed: number
+    routesToAddCapacity: number
+    routesToCutCapacity: number
+    routesToMonitor: number
+    totalRecommendedSeatDelta: number
+    recommendations: Array<{
+      routeKey: string
+      routeName: string
+      schoolName: string | null
+      direction: string
+      serviceType: string
+      currentCapacity: number
+      assignedSeats: number
+      historicalBookings: number
+      observedServiceDays: number
+      averageDemandPerTrip: number
+      peakDemand: number
+      projectedDemand: number
+      utilization: number
+      trendPercent: number
+      recommendation: "ADD_CAPACITY" | "CUT_CAPACITY" | "MONITOR"
+      recommendedSeatChange: number
+      recommendedCapacity: number
+      confidence: "HIGH" | "MEDIUM" | "LOW"
+      rationale: string
+    }>
+  }
 }
 
 const statusColors: Record<string, string> = {
@@ -60,6 +91,7 @@ export default function AdminDashboard() {
 
   const metrics = data?.metrics
   const pending = data?.pendingActions
+  const forecast = data?.capacityForecast
 
   return (
     <DashboardLayout title="Dashboard">
@@ -92,6 +124,95 @@ export default function AdminDashboard() {
         </div>
 
         <LiveOperationsMap />
+
+        {/* Capacity and Demand Forecasting */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Capacity & Demand Forecasting
+              </CardTitle>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Historical booking demand, route capacity, and utilisation forecast for {forecast?.planningTerm || "the next term"}.
+              </p>
+            </div>
+            <Badge variant="secondary">{forecast?.lookbackDays || 365}-day lookback</Badge>
+          </CardHeader>
+          <CardContent>
+            {!forecast?.routesAnalyzed ? (
+              <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-6">
+                No route and booking history available yet for forecasting.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg border border-gray-100 dark:border-gray-800 p-3">
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Routes analysed</p>
+                    <p className="text-2xl font-bold mt-1">{forecast.routesAnalyzed}</p>
+                  </div>
+                  <div className="rounded-lg border border-green-100 dark:border-green-900 bg-green-50 dark:bg-green-950 p-3">
+                    <p className="text-xs uppercase tracking-wide text-green-700 dark:text-green-300">Add capacity</p>
+                    <p className="text-2xl font-bold mt-1 text-green-800 dark:text-green-200">{forecast.routesToAddCapacity}</p>
+                  </div>
+                  <div className="rounded-lg border border-orange-100 dark:border-orange-900 bg-orange-50 dark:bg-orange-950 p-3">
+                    <p className="text-xs uppercase tracking-wide text-orange-700 dark:text-orange-300">Cut capacity</p>
+                    <p className="text-2xl font-bold mt-1 text-orange-800 dark:text-orange-200">{forecast.routesToCutCapacity}</p>
+                  </div>
+                  <div className="rounded-lg border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950 p-3">
+                    <p className="text-xs uppercase tracking-wide text-blue-700 dark:text-blue-300">Net seat change</p>
+                    <p className="text-2xl font-bold mt-1 text-blue-800 dark:text-blue-200">
+                      {forecast.totalRecommendedSeatDelta > 0 ? "+" : ""}{forecast.totalRecommendedSeatDelta}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {forecast.recommendations.map((item) => {
+                    const addCapacity = item.recommendation === "ADD_CAPACITY"
+                    const cutCapacity = item.recommendation === "CUT_CAPACITY"
+                    return (
+                      <div key={item.routeKey} className="rounded-lg border border-gray-100 dark:border-gray-800 p-4">
+                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold truncate">{item.routeName}</p>
+                              <Badge variant={addCapacity ? "default" : "secondary"}>
+                                {addCapacity ? "Add capacity" : cutCapacity ? "Cut capacity" : "Monitor"}
+                              </Badge>
+                              <Badge variant="outline">{item.confidence} confidence</Badge>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {item.schoolName || "All schools"} {" • "} {item.direction} {" • "} {item.serviceType}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{item.rationale}</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-right min-w-[260px]">
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Utilisation</p>
+                              <p className="font-semibold">{item.utilization}%</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Projected</p>
+                              <p className="font-semibold">{item.projectedDemand}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Seat change</p>
+                              <p className={`font-semibold flex items-center justify-end gap-1 ${addCapacity ? "text-green-700 dark:text-green-300" : cutCapacity ? "text-orange-700 dark:text-orange-300" : ""}`}>
+                                {item.recommendedSeatChange > 0 ? <TrendingUp className="h-4 w-4" /> : item.recommendedSeatChange < 0 ? <TrendingDown className="h-4 w-4" /> : null}
+                                {item.recommendedSeatChange > 0 ? "+" : ""}{item.recommendedSeatChange}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Identity QR Code */}
         <div className="grid lg:grid-cols-4 gap-6">
