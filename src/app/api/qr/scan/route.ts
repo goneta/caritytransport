@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 
 import prisma from '@/lib/prisma'
 import { generateIdentityCode } from '@/lib/identity-code'
-import { dispatchNotification } from '@/lib/notifications'
+import { notifyParentsForTripEvent } from '@/lib/trip-event-notifications'
 
 async function resolveManualIdentityCode(code: string) {
   const normalized = code.trim().toUpperCase()
@@ -119,14 +119,14 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (hasBooking && activeBookingItem?.booking.userId) {
-      const routeName = activeBookingItem.schedule?.routeName || pupil.seatAssignments[0]?.schedule.routeName || 'the selected route'
-      await dispatchNotification({
-        recipientId: activeBookingItem.booking.userId,
-        type: 'PUSH',
-        subject: `${pupil.fullName} boarded`,
-        message: `${pupil.fullName} has boarded ${routeName}${activeBookingItem.schedule?.departureTime ? ` at ${activeBookingItem.schedule.departureTime}` : ''}.`,
-        triggerEvent: 'QR_BOARDED'
+    let notifiedParentCount = 0
+    if (hasBooking && scheduleId) {
+      notifiedParentCount = await notifyParentsForTripEvent({
+        scheduleId,
+        status: 'BOARDED',
+        pupilId,
+        departureTime: activeBookingItem?.schedule?.departureTime,
+        senderId: session.user.id,
       })
     }
 
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       scan: {
         boardingRecorded: hasBooking,
         routeId: scheduleId || null,
-        notifiedParent: Boolean(hasBooking && activeBookingItem?.booking.userId)
+        notifiedParent: notifiedParentCount > 0
       },
       pupil: {
         id: pupil.id,
