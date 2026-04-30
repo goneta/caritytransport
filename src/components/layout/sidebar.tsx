@@ -48,6 +48,7 @@ const adminNavItems: NavItem[] = [
   { href: "/admin/bookings", label: "Bookings", icon: CreditCard },
   { href: "/admin/unavailability", label: "Driver Unavailability", icon: AlertTriangle },
   { href: "/admin/resolution", label: "Resolution Centre", icon: Headphones },
+  { href: "/admin/chat", label: "Moderated Chat", icon: MessageSquare },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/documents", label: "Documents", icon: FileText },
@@ -67,6 +68,7 @@ const parentNavItems: NavItem[] = [
   { href: "/parent/schedules", label: "Transport Schedule", icon: Route },
   { href: "/parent/tracking", label: "Live Tracking", icon: MapPin },
   { href: "/parent/resolution", label: "Resolution Centre", icon: Headphones },
+  { href: "/parent/chat", label: "Transport Chat", icon: MessageSquare },
   { href: "/parent/notifications", label: "Notifications", icon: Bell },
   { href: "/parent/settings", label: "Settings", icon: Settings },
 ]
@@ -85,6 +87,7 @@ const driverNavItems: NavItem[] = [
   { href: "/driver/route", label: "My Route", icon: Route },
   { href: "/driver/manifest", label: "Manifest", icon: BookOpen },
   { href: "/driver/attendance", label: "Attendance", icon: Users },
+  { href: "/driver/chat", label: "Route Chat", icon: MessageSquare },
   { href: "/driver/settings", label: "Settings", icon: Settings },
 ]
 

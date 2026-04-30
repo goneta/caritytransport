@@ -42,6 +42,11 @@ model User {
   savedPaymentMethods SavedPaymentMethod[]
   recurringTransportPlans RecurringTransportPlan[]
   routeChangeRequests RouteChangeRequest[]
+  createdChatThreads ChatThread[] @relation("ChatThreadCreator")
+  chatParticipations ChatParticipant[]
+  sentDirectMessages DirectMessage[] @relation("DirectMessageSender")
+  moderatedDirectMessages DirectMessage[] @relation("DirectMessageModerator")
+  chatModerationLogs ChatModerationLog[] @relation("ChatModerationActor")
 }
 
 model Session {
@@ -233,6 +238,7 @@ model TransportSchedule {
   recurringTransportPlans RecurringTransportPlan[]
   currentRouteChangeRequests RouteChangeRequest[] @relation("CurrentRouteChangeSchedule")
   requestedRouteChangeRequests RouteChangeRequest[] @relation("RequestedRouteChangeSchedule")
+  chatThreads     ChatThread[]
 }
 
 model SeatAssignment {
@@ -454,6 +460,84 @@ model ChatMessage {
   role        String
   content     String
   createdAt   DateTime  @default(now())
+}
+
+model ChatThread {
+  id          String    @id @default(cuid())
+  subject     String    @default("Transport conversation")
+  contextType String?
+  contextId   String?
+  scheduleId  String?
+  schedule    TransportSchedule? @relation(fields: [scheduleId], references: [id])
+  status      String    @default("OPEN") // OPEN, ARCHIVED, ESCALATED
+  createdById String
+  createdBy   User      @relation("ChatThreadCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  participants ChatParticipant[]
+  messages     DirectMessage[]
+  moderationLogs ChatModerationLog[]
+
+  @@index([createdById, createdAt])
+  @@index([scheduleId])
+  @@index([status, updatedAt])
+}
+
+model ChatParticipant {
+  threadId   String
+  thread     ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       String     @default("MEMBER") // OWNER, MEMBER, MODERATOR
+  lastReadAt DateTime?
+  mutedAt    DateTime?
+  joinedAt   DateTime   @default(now())
+
+  @@id([threadId, userId])
+  @@index([userId, lastReadAt])
+}
+
+model DirectMessage {
+  id              String    @id @default(cuid())
+  threadId        String
+  thread          ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User      @relation("DirectMessageSender", fields: [senderId], references: [id])
+  content         String
+  sanitizedContent String
+  status          String    @default("VISIBLE") // VISIBLE, FLAGGED, BLOCKED, AUTO_REPLY
+  moderationReason String?
+  moderatedById   String?
+  moderatedBy     User?     @relation("DirectMessageModerator", fields: [moderatedById], references: [id])
+  moderatedAt     DateTime?
+  driverAutoReply Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  moderationLogs ChatModerationLog[]
+
+  @@index([threadId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([status, createdAt])
+}
+
+model ChatModerationLog {
+  id              String    @id @default(cuid())
+  threadId        String
+  thread          ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  messageId       String?
+  message         DirectMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  actorId         String?
+  actor           User?     @relation("ChatModerationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action          String
+  reason          String?
+  originalContent String?
+  createdAt       DateTime  @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([messageId])
+  @@index([actorId, createdAt])
 }
 
 model HolidayPeriod {
