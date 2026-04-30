@@ -39,6 +39,9 @@ model User {
   supportTickets    SupportTicket[]
   ticketReplies     TicketReply[]
   pushSubscriptions PushSubscription[]
+  savedPaymentMethods SavedPaymentMethod[]
+  recurringTransportPlans RecurringTransportPlan[]
+  routeChangeRequests RouteChangeRequest[]
 }
 
 model Session {
@@ -107,6 +110,8 @@ model Pupil {
   absences            Absence[]
   tripLogs            TripLog[]
   bookingItems        BookingItem[]
+  recurringTransportPlans RecurringTransportPlan[]
+  routeChangeRequests RouteChangeRequest[]
 }
 
 // Pupil login account (separate from parent)
@@ -219,6 +224,9 @@ model TransportSchedule {
   seatAssignments SeatAssignment[]
   tripLogs        TripLog[]
   bookingItems    BookingItem[]
+  recurringTransportPlans RecurringTransportPlan[]
+  currentRouteChangeRequests RouteChangeRequest[] @relation("CurrentRouteChangeSchedule")
+  requestedRouteChangeRequests RouteChangeRequest[] @relation("RequestedRouteChangeSchedule")
 }
 
 model SeatAssignment {
@@ -537,4 +545,72 @@ model JobApplicationFile {
   fileType        String?
   fileUrl         String    // Path or base64 data URL
   uploadedAt      DateTime  @default(now())
+}
+
+
+model SavedPaymentMethod {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId      String?
+  stripePaymentMethodId String    @unique
+  brand                 String?
+  last4                 String?
+  expiryMonth           Int?
+  expiryYear            Int?
+  isDefault             Boolean   @default(false)
+  status                String    @default("ACTIVE")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  recurringPlans        RecurringTransportPlan[]
+
+  @@index([userId, status])
+}
+
+model RecurringTransportPlan {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pupilId               String?
+  pupil                 Pupil?    @relation(fields: [pupilId], references: [id])
+  scheduleId            String?
+  schedule              TransportSchedule? @relation(fields: [scheduleId], references: [id])
+  savedPaymentMethodId  String?
+  savedPaymentMethod    SavedPaymentMethod? @relation(fields: [savedPaymentMethodId], references: [id])
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?   @unique
+  status                String    @default("ACTIVE")
+  renewalInterval       String    @default("MONTHLY")
+  startDate             DateTime  @default(now())
+  nextRenewalDate       DateTime?
+  lastRenewedAt         DateTime?
+  amount                Float     @default(0)
+  currency              String    @default("GBP")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([nextRenewalDate])
+}
+
+model RouteChangeRequest {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pupilId            String
+  pupil              Pupil     @relation(fields: [pupilId], references: [id], onDelete: Cascade)
+  currentScheduleId  String?
+  currentSchedule    TransportSchedule? @relation("CurrentRouteChangeSchedule", fields: [currentScheduleId], references: [id])
+  requestedScheduleId String?
+  requestedSchedule  TransportSchedule? @relation("RequestedRouteChangeSchedule", fields: [requestedScheduleId], references: [id])
+  startDate          DateTime
+  endDate            DateTime?
+  reason             String?
+  status             String    @default("PENDING")
+  adminNotes         String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([pupilId, startDate])
 }

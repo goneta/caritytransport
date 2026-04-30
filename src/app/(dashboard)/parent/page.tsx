@@ -29,6 +29,8 @@ export default function ParentDashboard() {
   }, [session?.user?.id])
 
   const unreadCount = notifications.filter(n => !n.read).length
+  const activeAssignments = pupils.flatMap(p => (p.seatAssignments || []).filter((a: any) => a.status === 'ASSIGNED').map((a: any) => ({ ...a, pupilName: p.fullName })))
+  const pendingRouteChanges = pupils.flatMap(p => (p.routeChangeRequests || []).filter((r: any) => r.status === 'PENDING').map((r: any) => ({ ...r, pupilName: p.fullName })))
 
   return (
     <DashboardLayout title="Dashboard">
@@ -70,6 +72,39 @@ export default function ParentDashboard() {
           ))}
           </div>
         </div>
+
+
+        {pupils.length > 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Family Transport Overview</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid md:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">Children covered</p>
+                  <p className="text-2xl font-bold">{pupils.length}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">Assigned route seats</p>
+                  <p className="text-2xl font-bold">{activeAssignments.length}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">Pending route changes</p>
+                  <p className="text-2xl font-bold">{pendingRouteChanges.length}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {activeAssignments.slice(0, 6).map((assignment: any) => (
+                  <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                    <span className="font-medium">{assignment.pupilName}</span>
+                    <span className="text-gray-500">{assignment.schedule?.routeName || 'Route'} · {assignment.schedule?.departureTime || 'Time TBA'}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Children Overview */}
         {pupils.length > 0 && (

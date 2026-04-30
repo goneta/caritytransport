@@ -61,6 +61,7 @@ const parentNavItems: NavItem[] = [
   { href: "/parent/children", label: "My Children", icon: GraduationCap },
   { href: "/parent/book", label: "Book Transport", icon: Search },
   { href: "/parent/basket", label: "Basket", icon: ShoppingCart },
+  { href: "/parent/payments", label: "Payments & Renewals", icon: CreditCard },
   { href: "/parent/bookings", label: "My Bookings", icon: BookMarked },
   { href: "/parent/history", label: "Trip History", icon: History },
   { href: "/parent/schedules", label: "Transport Schedule", icon: Route },

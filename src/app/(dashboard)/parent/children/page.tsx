@@ -20,10 +20,13 @@ export default function ChildrenPage() {
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [showAbsence, setShowAbsence] = useState(false)
+  const [showRouteChange, setShowRouteChange] = useState(false)
   const [selectedPupil, setSelectedPupil] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ fullName: "", dateOfBirth: "", yearLevel: "", studentNumber: "", schoolId: "", pickupLocation: "", specialRequirements: "", emergencyContactName: "", emergencyContactPhone: "" })
   const [absenceForm, setAbsenceForm] = useState({ date: "", reason: "" })
+  const [routeOptions, setRouteOptions] = useState<any[]>([])
+  const [routeChangeForm, setRouteChangeForm] = useState({ currentScheduleId: "", requestedScheduleId: "", startDate: "", endDate: "", reason: "" })
 
   const fetchPupils = () => {
     if (!session?.user?.id) return
@@ -31,9 +34,11 @@ export default function ChildrenPage() {
     Promise.all([
       fetch(`/api/parent/pupils?parentUserId=${session.user.id}`).then(r => r.json()),
       fetch("/api/admin/schools").then(r => r.json()),
-    ]).then(([p, s]) => {
+      fetch("/api/parent/search").then(r => r.json()).catch(() => []),
+    ]).then(([p, s, routes]) => {
       setPupils(Array.isArray(p) ? p : [])
       setSchools(Array.isArray(s) ? s : [])
+      setRouteOptions(Array.isArray(routes) ? routes : [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }
@@ -70,6 +75,33 @@ export default function ChildrenPage() {
     } else toast.error("Failed to report absence")
   }
 
+  const openRouteChange = (pupil: any) => {
+    const current = pupil.seatAssignments?.[0]?.schedule?.id || ""
+    setSelectedPupil(pupil)
+    setRouteChangeForm({ currentScheduleId: current, requestedScheduleId: "", startDate: "", endDate: "", reason: "" })
+    setShowRouteChange(true)
+  }
+
+  const handleRouteChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPupil) return
+    setSaving(true)
+    const res = await fetch("/api/parent/route-changes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pupilId: selectedPupil.id, ...routeChangeForm }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      toast.success("Route-change request submitted for admin review")
+      setShowRouteChange(false)
+      fetchPupils()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      toast.error(d.error || "Failed to submit route-change request")
+    }
+  }
+
   return (
     <DashboardLayout title="My Children">
       <div className="space-y-6">
@@ -96,6 +128,7 @@ export default function ChildrenPage() {
             {pupils.map(pupil => {
               const assignments = pupil.seatAssignments || []
               const upcomingAbsences = pupil.absences || []
+              const pendingRouteChanges = pupil.routeChangeRequests || []
               return (
                 <Card key={pupil.id}>
                   <CardHeader className="pb-3">
@@ -118,6 +151,14 @@ export default function ChildrenPage() {
                           className="text-xs"
                         >
                           <CalendarOff className="h-3.5 w-3.5" />Report Absence
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openRouteChange(pupil)}
+                          className="text-xs"
+                        >
+                          <Route className="h-3.5 w-3.5" />Route Change
                         </Button>
                       </div>
                     </div>
@@ -166,6 +207,22 @@ export default function ChildrenPage() {
                               <CalendarOff className="h-3.5 w-3.5 text-yellow-600" />
                               <span>{formatDate(ab.date)}</span>
                               {ab.reason && <span className="text-gray-500 dark:text-gray-400">— {ab.reason}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {pendingRouteChanges.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Temporary Route Changes</p>
+                        <div className="space-y-1">
+                          {pendingRouteChanges.map((req: any) => (
+                            <div key={req.id} className="flex items-center gap-2 text-sm p-2 bg-blue-50 border border-blue-100 rounded">
+                              <Route className="h-3.5 w-3.5 text-blue-600" />
+                              <span>{formatDate(req.startDate)}</span>
+                              <span className="text-gray-500">to {req.requestedSchedule?.routeName || 'requested route'}</span>
+                              <Badge variant={req.status === 'APPROVED' ? 'success' : 'secondary'}>{req.status}</Badge>
                             </div>
                           ))}
                         </div>
@@ -241,6 +298,45 @@ export default function ChildrenPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showRouteChange} onOpenChange={setShowRouteChange}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Temporary Route Change for {selectedPupil?.fullName}</DialogTitle></DialogHeader>
+          <form onSubmit={handleRouteChange} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Requested Route *</Label>
+              <Select value={routeChangeForm.requestedScheduleId} onValueChange={v => setRouteChangeForm(p => ({ ...p, requestedScheduleId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Choose a temporary route" /></SelectTrigger>
+                <SelectContent>
+                  {routeOptions.map((route: any) => <SelectItem key={route.id} value={route.id}>{route.routeName} · {route.departureTime} · {route.school?.name || 'School'}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Start Date *</Label>
+                <Input type="date" value={routeChangeForm.startDate} onChange={e => setRouteChangeForm(p => ({ ...p, startDate: e.target.value }))} required min={new Date().toISOString().split('T')[0]} />
+              </div>
+              <div className="space-y-1">
+                <Label>End Date</Label>
+                <Input type="date" value={routeChangeForm.endDate} onChange={e => setRouteChangeForm(p => ({ ...p, endDate: e.target.value }))} min={routeChangeForm.startDate || new Date().toISOString().split('T')[0]} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Reason / notes</Label>
+              <Input value={routeChangeForm.reason} onChange={e => setRouteChangeForm(p => ({ ...p, reason: e.target.value }))} placeholder="e.g. temporary address change, activity week" />
+            </div>
+            <p className="text-sm text-gray-600 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+              Admin operations will review availability and confirm this temporary change before it affects the assigned route.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setShowRouteChange(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit Request"}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
     </DashboardLayout>
   )
 }

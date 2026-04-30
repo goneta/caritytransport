@@ -29,6 +29,14 @@ export async function GET(req: NextRequest) {
           where: { date: { gte: new Date() } },
           orderBy: { date: 'asc' },
         },
+        routeChangeRequests: {
+          where: { status: { in: ['PENDING', 'APPROVED'] } },
+          orderBy: { startDate: 'asc' },
+          include: {
+            currentSchedule: { select: { routeName: true, departureTime: true } },
+            requestedSchedule: { select: { routeName: true, departureTime: true } },
+          },
+        },
       },
     })
 
