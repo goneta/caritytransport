@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 import { dispatchNotification } from '@/lib/notifications'
 
 export async function GET(req: NextRequest) {
@@ -50,6 +51,8 @@ export async function PUT(req: NextRequest) {
     if (!entry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
+
+    const before = await prisma.driverUnavailability.findUnique({ where: { id }, include: { driver: { include: { user: true } } } })
 
     const updated = await prisma.driverUnavailability.update({
       where: { id },
@@ -102,6 +105,8 @@ export async function PUT(req: NextRequest) {
         data: { parentsNotified: true }
       })
     }
+
+    await writeAdminAuditLogForRequest({ request: req, action: 'UPDATE', entity: 'DriverUnavailability', entityId: id, before, after: updated })
 
     return NextResponse.json(updated)
   } catch (error) {

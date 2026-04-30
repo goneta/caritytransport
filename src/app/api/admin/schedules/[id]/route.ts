@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -56,6 +57,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
+    const before = await prisma.transportSchedule.findUnique({ where: { id }, include: { school: true, vehicle: true, driver: true, seatAssignments: true } })
+
     const schedule = await prisma.transportSchedule.update({
       where: { id },
       data: {
@@ -77,16 +80,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         status: data.status,
       },
     })
+
+    await writeAdminAuditLogForRequest({ request: req, action: 'UPDATE', entity: 'TransportSchedule', entityId: id, before, after: schedule })
+
     return NextResponse.json(schedule)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update schedule' }, { status: 500 })
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
+    const before = await prisma.transportSchedule.findUnique({ where: { id }, include: { school: true, vehicle: true, driver: true, seatAssignments: true } })
     await prisma.transportSchedule.delete({ where: { id } })
+    await writeAdminAuditLogForRequest({ request: req, action: 'DELETE', entity: 'TransportSchedule', entityId: id, before, after: null })
     return NextResponse.json({ message: 'Schedule deleted' })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete schedule' }, { status: 500 })

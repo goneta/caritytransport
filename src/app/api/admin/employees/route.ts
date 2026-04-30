@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 
 export async function GET(req: NextRequest) {
   try {
@@ -83,6 +84,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.user.delete({ where: { id } })
+
+    await writeAdminAuditLogForRequest({ request: req, action: 'DELETE', entity: 'Employee', entityId: id, before: null, after: null })
 
     return NextResponse.json({ success: true })
   } catch (error) {

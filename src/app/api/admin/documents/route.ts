@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -77,15 +78,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id,
-        action: 'CREATE',
-        entity: 'Document',
-        entityId: document.id,
-        after: JSON.stringify({ fileName, docType }),
-      },
+    await writeAdminAuditLogForRequest({
+      request: req,
+      action: 'CREATE',
+      entity: 'Document',
+      entityId: document.id,
+      before: null,
+      after: { ...document, fileUrl: '[REDACTED]' },
     })
 
     return NextResponse.json(document, { status: 201 })
@@ -116,14 +115,13 @@ export async function DELETE(req: NextRequest) {
 
     await prisma.document.delete({ where: { id } })
 
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id,
-        action: 'DELETE',
-        entity: 'Document',
-        entityId: id,
-        after: JSON.stringify({ fileName: doc.fileName, docType: doc.docType }),
-      },
+    await writeAdminAuditLogForRequest({
+      request: req,
+      action: 'DELETE',
+      entity: 'Document',
+      entityId: id,
+      before: { ...doc, fileUrl: '[REDACTED]' },
+      after: null,
     })
 
     return NextResponse.json({ success: true })

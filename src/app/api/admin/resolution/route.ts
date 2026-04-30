@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 import { dispatchNotification } from '@/lib/notifications'
 
 export async function GET(req: NextRequest) {
@@ -84,6 +85,8 @@ export async function PUT(req: NextRequest) {
       updateData.refundAmount = refundAmount
     }
 
+    const before = await prisma.supportTicket.findUnique({ where: { id }, include: { replies: true } })
+
     const updated = await prisma.supportTicket.update({
       where: { id },
       data: updateData
@@ -117,6 +120,8 @@ export async function PUT(req: NextRequest) {
         triggerEvent: 'SUPPORT_TICKET_UPDATED',
       })
     }
+
+    await writeAdminAuditLogForRequest({ request: req, action: 'UPDATE', entity: 'SupportTicket', entityId: id, before, after: updated })
 
     return NextResponse.json(updated)
   } catch (error) {

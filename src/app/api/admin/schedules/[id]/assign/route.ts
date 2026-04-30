@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const assignment = await prisma.seatAssignment.create({
         data: { scheduleId: id, pupilId, status: 'WAITLISTED' },
       })
+      await writeAdminAuditLogForRequest({ request: req, action: 'CREATE', entity: 'SeatAssignment', entityId: assignment.id, before: null, after: { ...assignment, waitlisted: true } })
+
       return NextResponse.json({ ...assignment, waitlisted: true })
     }
 
@@ -40,6 +43,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     })
 
+    await writeAdminAuditLogForRequest({ request: req, action: 'CREATE', entity: 'SeatAssignment', entityId: assignment.id, before: null, after: { ...assignment, waitlisted: false } })
+
     return NextResponse.json({ ...assignment, waitlisted: false }, { status: 201 })
   } catch (error) {
     console.error(error)
@@ -51,9 +56,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params
   try {
     const { pupilId } = await req.json()
+    const before = await prisma.seatAssignment.findMany({ where: { scheduleId: id, pupilId } })
     await prisma.seatAssignment.deleteMany({
       where: { scheduleId: id, pupilId },
     })
+    await writeAdminAuditLogForRequest({ request: req, action: 'DELETE', entity: 'SeatAssignment', entityId: pupilId, before, after: null })
     return NextResponse.json({ message: 'Pupil removed from route' })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to remove pupil' }, { status: 500 })

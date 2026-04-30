@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 
 export async function GET() {
   try {
@@ -75,6 +76,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.school.delete({ where: { id } })
+
+    await writeAdminAuditLogForRequest({ request: req, action: 'DELETE', entity: 'School', entityId: id, before: null, after: null })
 
     return NextResponse.json({ success: true })
   } catch (error) {

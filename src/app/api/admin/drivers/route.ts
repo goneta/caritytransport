@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 
 export async function GET(req: NextRequest) {
   try {
@@ -114,6 +115,8 @@ export async function PUT(req: NextRequest) {
       },
     })
 
+    await writeAdminAuditLogForRequest({ request: req, action: 'UPDATE', entity: 'Driver', entityId: updated?.id ?? id, before: driver, after: updated })
+
     return NextResponse.json(updated)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update driver' }, { status: 500 })
@@ -137,6 +140,8 @@ export async function DELETE(req: NextRequest) {
     // Delete driver record first, then the associated user
     await prisma.driver.delete({ where: { id } })
     await prisma.user.delete({ where: { id: driver.userId } })
+
+    await writeAdminAuditLogForRequest({ request: req, action: 'DELETE', entity: 'Driver', entityId: id, before: null, after: null })
 
     return NextResponse.json({ success: true })
   } catch (error) {

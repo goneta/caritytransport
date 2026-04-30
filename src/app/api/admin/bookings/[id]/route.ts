@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 import { processStripeRefund } from '@/lib/stripe-refunds'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -82,6 +83,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         })
       }
 
+      await writeAdminAuditLogForRequest({
+        request: req,
+        action: refundable ? 'REFUND' : 'CANCEL',
+        entity: 'Booking',
+        entityId: id,
+        before: booking,
+        after: { ...updated, refundable, stripeRefundId },
+      })
+
       return NextResponse.json({ ...updated, refundable })
     }
 
@@ -114,6 +124,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: { status: 'REFUNDED' },
         })
       }
+      await writeAdminAuditLogForRequest({
+        request: req,
+        action: 'UPDATE',
+        entity: 'Booking',
+        entityId: id,
+        before: booking,
+        after: updated,
+      })
+
       return NextResponse.json(updated)
     }
 

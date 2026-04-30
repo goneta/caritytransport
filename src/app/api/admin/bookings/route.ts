@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { writeAdminAuditLogForRequest } from '@/lib/admin-audit'
 
 export async function GET(req: NextRequest) {
   try {
@@ -154,6 +155,15 @@ export async function POST(req: NextRequest) {
       include: { items: true, payment: true },
     })
 
+    await writeAdminAuditLogForRequest({
+      request: req,
+      action: 'CREATE',
+      entity: 'Booking',
+      entityId: booking.id,
+      before: null,
+      after: booking,
+    })
+
     return NextResponse.json(booking, { status: 201 })
   } catch (error) {
     console.error(error)
@@ -170,12 +180,23 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 })
     }
 
+    const before = await prisma.booking.findUnique({ where: { id }, include: { items: true, payment: true } })
+
     const booking = await prisma.booking.update({
       where: { id },
       data: {
         ...(fields.status !== undefined && { status: fields.status }),
         ...(fields.cancelReason !== undefined && { cancelReason: fields.cancelReason }),
       },
+    })
+
+    await writeAdminAuditLogForRequest({
+      request: req,
+      action: 'UPDATE',
+      entity: 'Booking',
+      entityId: booking.id,
+      before,
+      after: booking,
     })
 
     return NextResponse.json(booking)
@@ -192,7 +213,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 })
     }
 
+    const before = await prisma.booking.findUnique({ where: { id }, include: { items: true, payment: true } })
     await prisma.booking.delete({ where: { id } })
+
+    await writeAdminAuditLogForRequest({
+      request: req,
+      action: 'DELETE',
+      entity: 'Booking',
+      entityId: id,
+      before,
+      after: null,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {
