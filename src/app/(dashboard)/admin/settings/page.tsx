@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Settings, Bell, Shield, Mail, Smartphone, Save, User, CheckCircle, AlertCircle } from "lucide-react"
 import AvatarUpload from "@/components/ui/avatar-upload"
 import toast from "react-hot-toast"
+import TwoFactorSettings from "@/components/security/two-factor-settings"
+import SecurityPolicySettings from "@/components/security/security-policy-settings"
 
 export default function SettingsPage() {
   const { data: session, update } = useSession()
@@ -106,6 +108,10 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <TwoFactorSettings />
+
+        <SecurityPolicySettings />
 
         {/* Platform Settings */}
         <Card>

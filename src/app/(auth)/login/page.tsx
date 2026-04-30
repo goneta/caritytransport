@@ -13,6 +13,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [twoFactorCode, setTwoFactorCode] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -23,13 +24,14 @@ export default function LoginPage() {
     const result = await signIn("credentials", {
       email,
       password,
+      twoFactorCode,
       redirect: false,
     })
 
     setLoading(false)
 
     if (result?.error) {
-      toast.error("Invalid email or password")
+      toast.error("Invalid credentials or two-factor code")
     } else {
       const res = await fetch("/api/auth/session")
       const session = await res.json()
@@ -96,6 +98,20 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="twoFactorCode">Two-factor or recovery code</Label>
+              <Input
+                id="twoFactorCode"
+                type="text"
+                value={twoFactorCode}
+                onChange={e => setTwoFactorCode(e.target.value)}
+                placeholder="Optional unless enabled"
+                autoComplete="one-time-code"
+                className="font-mono"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">Required for admin or driver accounts that have two-factor authentication enabled.</p>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>

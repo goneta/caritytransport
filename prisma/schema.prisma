@@ -23,6 +23,12 @@ model User {
   notifyPush        Boolean   @default(true)
   platformId        String?   @unique // Human-readable ID e.g. USR-00001
   qrCodeData        String?   // Signed QR token (JSON encoded)
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  twoFactorPendingSecret String?
+  twoFactorRecoveryCodes String? // JSON array of bcrypt-hashed recovery codes
+  twoFactorEnrolledAt DateTime?
+  twoFactorLastUsedAt DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -56,6 +62,15 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SecurityPolicy {
+  id                      String   @id @default("global")
+  requireAdminTwoFactor   Boolean  @default(false)
+  requireDriverTwoFactor  Boolean  @default(false)
+  updatedById             String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
 
 model Parent {

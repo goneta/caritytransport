@@ -10,6 +10,7 @@ import { User, Bell, Shield, Save, Phone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import AvatarUpload from "@/components/ui/avatar-upload"
 import toast from "react-hot-toast"
+import TwoFactorSettings from "@/components/security/two-factor-settings"
 
 export default function DriverSettingsPage() {
   const { data: session, update } = useSession()
@@ -105,6 +106,8 @@ export default function DriverSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <TwoFactorSettings />
 
         {/* Notifications */}
         <Card>
