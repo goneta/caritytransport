@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         seatAssignments: {
           include: {
             pupil: {
-              select: { fullName: true, yearLevel: true, school: { select: { name: true } } }
+              select: { id: true, fullName: true, yearLevel: true, school: { select: { name: true } } }
             }
           }
         },

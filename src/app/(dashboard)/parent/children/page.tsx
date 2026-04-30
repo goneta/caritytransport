@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { GraduationCap, Plus, Loader2, AlertTriangle, Route, Bus, User, CalendarOff, Clock } from "lucide-react"
+import { GraduationCap, Plus, Loader2, AlertTriangle, Route, Bus, User, CalendarOff, Clock, ShieldCheck } from "lucide-react"
 import toast from "react-hot-toast"
 import { formatDate } from "@/lib/utils"
 
@@ -21,12 +21,15 @@ export default function ChildrenPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [showAbsence, setShowAbsence] = useState(false)
   const [showRouteChange, setShowRouteChange] = useState(false)
+  const [showGuardian, setShowGuardian] = useState(false)
   const [selectedPupil, setSelectedPupil] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ fullName: "", dateOfBirth: "", yearLevel: "", studentNumber: "", schoolId: "", pickupLocation: "", specialRequirements: "", emergencyContactName: "", emergencyContactPhone: "" })
   const [absenceForm, setAbsenceForm] = useState({ date: "", reason: "" })
   const [routeOptions, setRouteOptions] = useState<any[]>([])
   const [routeChangeForm, setRouteChangeForm] = useState({ currentScheduleId: "", requestedScheduleId: "", startDate: "", endDate: "", reason: "" })
+  const [guardianForm, setGuardianForm] = useState({ name: "", relationship: "", phone: "", email: "", validUntil: "" })
+  const [lastGuardianCredentials, setLastGuardianCredentials] = useState<any>(null)
 
   const fetchPupils = () => {
     if (!session?.user?.id) return
@@ -102,6 +105,48 @@ export default function ChildrenPage() {
     }
   }
 
+  const openGuardianDialog = (pupil: any) => {
+    setSelectedPupil(pupil)
+    setGuardianForm({ name: "", relationship: "", phone: "", email: "", validUntil: "" })
+    setLastGuardianCredentials(null)
+    setShowGuardian(true)
+  }
+
+  const handleGuardianSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPupil) return
+    setSaving(true)
+    const res = await fetch("/api/parent/guardians", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pupilId: selectedPupil.id, ...guardianForm }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setSaving(false)
+    if (res.ok) {
+      setLastGuardianCredentials(data)
+      toast.success("Authorized guardian added")
+      fetchPupils()
+    } else {
+      toast.error(data.error || "Failed to add authorized guardian")
+    }
+  }
+
+  const revokeGuardian = async (guardianId: string) => {
+    if (!confirm("Revoke this guardian's pickup authorization?")) return
+    const res = await fetch("/api/parent/guardians", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: guardianId, status: "REVOKED" }),
+    })
+    if (res.ok) {
+      toast.success("Guardian authorization revoked")
+      fetchPupils()
+    } else {
+      toast.error("Failed to revoke guardian")
+    }
+  }
+
   return (
     <DashboardLayout title="My Children">
       <div className="space-y-6">
@@ -159,6 +204,14 @@ export default function ChildrenPage() {
                           className="text-xs"
                         >
                           <Route className="h-3.5 w-3.5" />Route Change
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openGuardianDialog(pupil)}
+                          className="text-xs"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" />Guardians
                         </Button>
                       </div>
                     </div>
@@ -229,6 +282,27 @@ export default function ChildrenPage() {
                       </div>
                     )}
 
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Authorized Pickup Guardians</p>
+                      {pupil.authorizedGuardians?.length ? (
+                        <div className="space-y-2">
+                          {pupil.authorizedGuardians.map((guardian: any) => (
+                            <div key={guardian.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 p-2 text-sm dark:border-gray-700">
+                              <div>
+                                <p className="font-medium">{guardian.name} <span className="text-gray-500">({guardian.relationship})</span></p>
+                                <p className="text-xs text-gray-500">{guardian.phone || guardian.email || 'No contact added'} · {guardian.status}</p>
+                              </div>
+                              {guardian.status === 'ACTIVE' && (
+                                <Button type="button" variant="ghost" size="sm" className="text-xs" onClick={() => revokeGuardian(guardian.id)}>Revoke</Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No additional pickup guardians authorized.</p>
+                      )}
+                    </div>
+
                     {/* Emergency Contact */}
                     {pupil.emergencyContactName && (
                       <div>
@@ -294,6 +368,32 @@ export default function ChildrenPage() {
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setShowAbsence(false)}>Cancel</Button>
               <Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Report Absence"}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGuardian} onOpenChange={setShowGuardian}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Authorize Pickup Guardian for {selectedPupil?.fullName}</DialogTitle></DialogHeader>
+          <form onSubmit={handleGuardianSave} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 col-span-2"><Label>Guardian Name *</Label><Input value={guardianForm.name} onChange={e => setGuardianForm(p => ({ ...p, name: e.target.value }))} required /></div>
+              <div className="space-y-1"><Label>Relationship *</Label><Input value={guardianForm.relationship} onChange={e => setGuardianForm(p => ({ ...p, relationship: e.target.value }))} placeholder="e.g. Grandparent" required /></div>
+              <div className="space-y-1"><Label>Valid Until</Label><Input type="date" value={guardianForm.validUntil} onChange={e => setGuardianForm(p => ({ ...p, validUntil: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Phone</Label><Input value={guardianForm.phone} onChange={e => setGuardianForm(p => ({ ...p, phone: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Email</Label><Input type="email" value={guardianForm.email} onChange={e => setGuardianForm(p => ({ ...p, email: e.target.value }))} /></div>
+            </div>
+            {lastGuardianCredentials && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 space-y-2">
+                <p className="font-semibold">Share these pickup credentials securely with the guardian. The PIN is shown once.</p>
+                <p>PIN: <span className="font-mono tracking-widest">{lastGuardianCredentials.pickupPin}</span></p>
+                <p className="break-all text-xs">QR payload: {lastGuardianCredentials.qrCodeData}</p>
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setShowGuardian(false)}>Close</Button>
+              <Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Guardian"}</Button>
             </div>
           </form>
         </DialogContent>

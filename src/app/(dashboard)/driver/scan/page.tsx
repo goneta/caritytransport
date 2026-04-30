@@ -19,6 +19,7 @@ import {
   Camera,
   Keyboard,
   RotateCcw,
+  ShieldCheck,
   Video,
   VideoOff
 } from 'lucide-react'
@@ -41,6 +42,13 @@ interface ScanResult {
     boardingRecorded: boolean
     routeId: string | null
     notifiedParent: boolean
+    pickupVerified?: boolean
+  }
+  guardian?: {
+    id: string
+    name: string
+    relationship: string
+    phone?: string | null
   }
   pupil?: {
     id: string
@@ -60,6 +68,7 @@ interface Schedule {
   id: string
   routeName: string
   departureTime: string
+  seatAssignments?: Array<{ pupil: { id: string; fullName: string; yearLevel?: string | null } }>
 }
 
 export default function DriverScanPage() {
@@ -72,6 +81,10 @@ export default function DriverScanPage() {
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [history, setHistory] = useState<Array<{ result: ScanResult; time: string }>>([])
+  const [pickupPupilId, setPickupPupilId] = useState('')
+  const [pickupCode, setPickupCode] = useState('')
+  const [pickupResult, setPickupResult] = useState<ScanResult | null>(null)
+  const [pickupLoading, setPickupLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -95,6 +108,7 @@ export default function DriverScanPage() {
       setSchedules(data.schedules || [])
       if (data.schedules?.length > 0) {
         setSelectedScheduleId(data.schedules[0].id)
+        setPickupPupilId(data.schedules[0].seatAssignments?.[0]?.pupil?.id || '')
       }
     } catch (e) {
       console.error(e)
@@ -185,6 +199,31 @@ export default function DriverScanPage() {
     processQrData(manualInput)
   }
 
+  async function verifyPickup(e: React.FormEvent) {
+    e.preventDefault()
+    setPickupLoading(true)
+    setPickupResult(null)
+    try {
+      const res = await fetch('/api/driver/guardian-pickup/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduleId: selectedScheduleId || undefined,
+          pupilId: pickupPupilId || undefined,
+          verificationCode: pickupCode,
+        })
+      })
+      const data = await res.json()
+      setPickupResult(data)
+      setHistory(prev => [{ result: data, time: new Date().toLocaleTimeString('en-GB') }, ...prev.slice(0, 9)])
+      if (res.ok) setPickupCode('')
+    } catch {
+      setPickupResult({ valid: false, outcome: 'red', message: 'Failed to verify guardian pickup. Please try again.' })
+    } finally {
+      setPickupLoading(false)
+    }
+  }
+
   function reset() {
     setResult(null)
     setManualInput('')
@@ -205,7 +244,11 @@ export default function DriverScanPage() {
             <select
               className="w-full mt-1 border rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={selectedScheduleId}
-              onChange={e => setSelectedScheduleId(e.target.value)}
+              onChange={e => {
+                setSelectedScheduleId(e.target.value)
+                const nextSchedule = schedules.find(schedule => schedule.id === e.target.value)
+                setPickupPupilId(nextSchedule?.seatAssignments?.[0]?.pupil?.id || '')
+              }}
             >
               <option value="">No specific route</option>
               {schedules.map(s => (
@@ -321,6 +364,43 @@ export default function DriverScanPage() {
           </Card>
         )}
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="w-5 h-5" /> Guardian Pickup Verification</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={verifyPickup} className="space-y-3">
+              <div>
+                <Label>Pupil being released</Label>
+                <select
+                  className="w-full mt-1 border rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={pickupPupilId}
+                  onChange={e => setPickupPupilId(e.target.value)}
+                >
+                  <option value="">Select pupil on this route</option>
+                  {(schedules.find(schedule => schedule.id === selectedScheduleId)?.seatAssignments || []).map(assignment => (
+                    <option key={assignment.pupil.id} value={assignment.pupil.id}>{assignment.pupil.fullName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Guardian PIN or QR payload</Label>
+                <Input value={pickupCode} onChange={e => setPickupCode(e.target.value)} placeholder="Enter guardian PIN or paste/scan guardian QR data" className="font-mono text-sm" />
+                <p className="text-xs text-slate-400 mt-1">A successful verification records a DROPPED trip log and queues the parent drop-off notification.</p>
+              </div>
+              <Button type="submit" disabled={pickupLoading || !pickupPupilId || !pickupCode} className="w-full">
+                {pickupLoading ? 'Verifying...' : 'Verify Guardian and Release'}
+              </Button>
+            </form>
+            {pickupResult && (
+              <div className={`mt-4 rounded-lg border p-3 text-sm ${pickupResult.outcome === 'green' ? 'border-green-300 bg-green-50 text-green-800' : 'border-red-300 bg-red-50 text-red-800'}`}>
+                <p className="font-semibold">{pickupResult.message}</p>
+                {pickupResult.guardian && <p>Guardian: {pickupResult.guardian.name} ({pickupResult.guardian.relationship})</p>}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {result && (
           <Card className={`border-2 ${result.outcome === 'green' ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50'}`}>
             <CardContent className="pt-6">
@@ -335,7 +415,7 @@ export default function DriverScanPage() {
                 </p>
                 {result.scan?.boardingRecorded && (
                   <p className="text-xs text-green-700 mt-2">
-                    Boarding recorded{result.scan.notifiedParent ? ' and parent notification queued.' : '.'}
+                    {result.scan.pickupVerified ? 'Pickup release recorded' : 'Boarding recorded'}{result.scan.notifiedParent ? ' and parent notification queued.' : '.'}
                   </p>
                 )}
               </div>
@@ -421,7 +501,7 @@ export default function DriverScanPage() {
                       )}
                       <span className="font-medium">{h.result.pupil?.fullName || 'Unknown'}</span>
                       <Badge className={h.result.outcome === 'green' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>
-                        {h.result.outcome === 'green' ? 'BOARDED' : 'REJECTED'}
+                        {h.result.scan?.pickupVerified ? 'RELEASED' : h.result.outcome === 'green' ? 'BOARDED' : 'REJECTED'}
                       </Badge>
                     </div>
                     <span className="text-slate-400">{h.time}</span>

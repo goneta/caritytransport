@@ -78,6 +78,7 @@ model Parent {
   userId      String    @unique
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   pupils      Pupil[]
+  authorizedGuardians AuthorizedGuardian[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -134,6 +135,8 @@ model Pupil {
   recurringTransportPlans RecurringTransportPlan[]
   routeChangeRequests RouteChangeRequest[]
   incidentReports IncidentReport[]
+  authorizedGuardians AuthorizedGuardian[]
+  pickupVerifications PickupVerification[]
 }
 
 // Pupil login account (separate from parent)
@@ -207,6 +210,7 @@ model Driver {
   preTripChecklists PreTripChecklist[]
   emergencyEscalations EmergencyEscalation[]
   unavailability  DriverUnavailability[]
+  pickupVerifications PickupVerification[]
 }
 
 // PRD3: Driver availability management
@@ -259,6 +263,7 @@ model TransportSchedule {
   requestedRouteChangeRequests RouteChangeRequest[] @relation("RequestedRouteChangeSchedule")
   chatThreads     ChatThread[]
   incidentReports IncidentReport[]
+  pickupVerifications PickupVerification[]
 }
 
 model SeatAssignment {
@@ -299,6 +304,55 @@ model TripLog {
   longitude   Float?
   qrScanned   Boolean   @default(false)
   incidentReports IncidentReport[]
+  pickupVerifications PickupVerification[]
+}
+
+model AuthorizedGuardian {
+  id            String   @id @default(cuid())
+  parentId      String
+  parent        Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  pupilId       String
+  pupil         Pupil    @relation(fields: [pupilId], references: [id], onDelete: Cascade)
+  name          String
+  relationship  String
+  phone         String?
+  email         String?
+  status        String   @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
+  pinHash       String
+  qrCodeData    String?
+  validFrom     DateTime?
+  validUntil    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pickupVerifications PickupVerification[]
+
+  @@index([parentId])
+  @@index([pupilId, status])
+}
+
+model PickupVerification {
+  id            String   @id @default(cuid())
+  guardianId    String
+  guardian      AuthorizedGuardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  pupilId       String
+  pupil         Pupil    @relation(fields: [pupilId], references: [id], onDelete: Cascade)
+  scheduleId    String?
+  schedule      TransportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  driverId      String?
+  driver        Driver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  tripLogId     String?
+  tripLog       TripLog? @relation(fields: [tripLogId], references: [id], onDelete: SetNull)
+  method        String   // PIN, QR
+  status        String   @default("VERIFIED") // VERIFIED, DENIED
+  notes         String?
+  verifiedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([guardianId, verifiedAt])
+  @@index([pupilId, verifiedAt])
+  @@index([scheduleId, verifiedAt])
+  @@index([driverId, verifiedAt])
 }
 
 model PreTripChecklist {

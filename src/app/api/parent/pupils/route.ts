@@ -37,6 +37,10 @@ export async function GET(req: NextRequest) {
             requestedSchedule: { select: { routeName: true, departureTime: true } },
           },
         },
+        authorizedGuardians: {
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, name: true, relationship: true, phone: true, email: true, status: true, validFrom: true, validUntil: true, qrCodeData: true, createdAt: true },
+        },
       },
     })
 

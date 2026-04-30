@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { generateIdentityCode } from '@/lib/identity-code'
 import { notifyParentsForTripEvent } from '@/lib/trip-event-notifications'
+import { parseGuardianQrPayload, verifyGuardianPickup } from '@/lib/guardian-verification'
 
 async function resolveManualIdentityCode(code: string) {
   const normalized = code.trim().toUpperCase()
@@ -55,11 +56,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const guardianPayload = parseGuardianQrPayload(payload)
+    if (guardianPayload) {
+      const result = await verifyGuardianPickup({
+        sessionUserId: session.user.id,
+        pupilId: guardianPayload.pupilId,
+        scheduleId: scheduleId || null,
+        qrData: payload,
+      })
+      return NextResponse.json(result.response, { status: result.status })
+    }
+
     if (payload.type !== 'PUPIL') {
       return NextResponse.json({
         valid: false,
         outcome: 'red',
-        message: 'Not a pupil QR code'
+        message: 'Not a pupil or guardian pickup QR code'
       })
     }
 
