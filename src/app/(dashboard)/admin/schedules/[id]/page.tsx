@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, Users, Bus, MapPin, Clock, Plus, Trash2, Loader2, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Users, Bus, MapPin, Clock, Plus, Trash2, Loader2, AlertTriangle, Sparkles, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import toast from "react-hot-toast"
 
@@ -23,6 +23,9 @@ export default function ScheduleDetailPage() {
   const [selectedPupilId, setSelectedPupilId] = useState("")
   const [assigning, setAssigning] = useState(false)
   const [statusChange, setStatusChange] = useState("")
+  const [optimizing, setOptimizing] = useState(false)
+  const [applyingOptimization, setApplyingOptimization] = useState(false)
+  const [optimizationSuggestion, setOptimizationSuggestion] = useState<any>(null)
 
   const fetchSchedule = () => {
     fetch(`/api/admin/schedules/${id}`)
@@ -79,6 +82,31 @@ export default function ScheduleDetailPage() {
     else toast.error("Failed to update status")
   }
 
+  const handleOptimizeRoute = async (apply = false) => {
+    if (apply) setApplyingOptimization(true)
+    else setOptimizing(true)
+
+    const res = await fetch(`/api/admin/schedules/${id}/optimize`, {
+      method: apply ? "POST" : "GET",
+      headers: { "Content-Type": "application/json" },
+      body: apply ? JSON.stringify({ apply: true }) : undefined,
+    })
+    const data = await res.json().catch(() => ({}))
+
+    setOptimizing(false)
+    setApplyingOptimization(false)
+
+    if (!res.ok) {
+      toast.error(data.error || "Failed to optimize route")
+      if (data.suggestion) setOptimizationSuggestion(data.suggestion)
+      return
+    }
+
+    setOptimizationSuggestion(data.suggestion)
+    toast.success(apply ? "Optimized pickup stops saved" : "Route suggestion generated")
+    if (apply) fetchSchedule()
+  }
+
   if (loading) return (
     <DashboardLayout title="Route Detail">
       <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -121,6 +149,10 @@ export default function ScheduleDetailPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">{schedule.direction === 'HOME_TO_SCHOOL' ? 'Home → School' : 'School → Home'} · {schedule.recurrence}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleOptimizeRoute(false)} disabled={optimizing || applyingOptimization}>
+              {optimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Optimize pickups
+            </Button>
             <span className={`text-sm px-3 py-1 rounded-full font-medium ${statusColor[schedule.status]}`}>{schedule.status}</span>
             <Select value={schedule.status} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
@@ -198,17 +230,62 @@ export default function ScheduleDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Route Optimization Assistant */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4" />Route Optimization Assistant</CardTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => handleOptimizeRoute(false)} disabled={optimizing || applyingOptimization || assigned.length === 0}>
+                {optimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Suggest order
+              </Button>
+              <Button size="sm" onClick={() => handleOptimizeRoute(true)} disabled={applyingOptimization || optimizing || !optimizationSuggestion?.stops?.length}>
+                {applyingOptimization ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Apply stops
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Suggests a pickup order for assigned pupils using their pickup addresses and postcodes. Suggestions are not saved until an admin applies them.
+            </p>
+            {optimizationSuggestion?.warnings?.length > 0 && (
+              <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                {optimizationSuggestion.warnings.map((warning: string, index: number) => <p key={index}>{warning}</p>)}
+              </div>
+            )}
+            {optimizationSuggestion?.stops?.length > 0 ? (
+              <div className="space-y-2">
+                {optimizationSuggestion.stops.map((stop: any, i: number) => (
+                  <div key={stop.pupilId || i} className="flex items-start gap-3 rounded-lg border p-3">
+                    <div className="w-7 h-7 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{stop.pupilName}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{stop.address}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{stop.estimatedTime} · {stop.confidence} confidence</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {assigned.length === 0 ? "Assign pupils to this route before generating a pickup-order suggestion." : "Generate a suggestion to preview the proposed pickup order."}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Pickup Stops */}
         {stops.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="h-4 w-4" />Pickup Stops</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="h-4 w-4" />Saved Pickup Stops</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {stops.map((stop: any, i: number) => (
                   <div key={i} className="flex items-center gap-3">
                     <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</div>
                     <div>
-                      <p className="text-sm font-medium">{stop.address}</p>
+                      <p className="text-sm font-medium">{stop.pupilName ? `${stop.pupilName} — ` : ""}{stop.address}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{stop.estimatedTime}</p>
                     </div>
                   </div>
