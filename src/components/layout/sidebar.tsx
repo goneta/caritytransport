@@ -35,6 +35,7 @@ const adminNavItems: NavItem[] = [
       { href: "/admin/companies", label: "Companies", icon: Building2 },
       { href: "/admin/vehicles", label: "Vehicles", icon: Car },
       { href: "/admin/drivers", label: "Drivers", icon: UserCog },
+      { href: "/admin/compliance", label: "Compliance", icon: ShieldCheck },
     ]
   },
   { href: "/admin/schools", label: "Schools", icon: School },

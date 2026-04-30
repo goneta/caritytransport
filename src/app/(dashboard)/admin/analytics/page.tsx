@@ -1,4 +1,5 @@
 "use client"
+
 import { useEffect, useState } from "react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,10 +7,39 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area
 } from "recharts"
-import { BarChart3, TrendingUp, Users, Bus, Route, CreditCard, PoundSterling, Percent } from "lucide-react"
+import { BarChart3, TrendingUp, Users, Bus, Route, CreditCard, PoundSterling, Percent, RotateCcw } from "lucide-react"
 import { Loader2 } from "lucide-react"
 
 const COLORS = ['#000', '#333', '#555', '#777', '#999', '#bbb']
+
+type FinanceSegment = {
+  key: string
+  label: string
+  revenue: number
+  refunds: number
+  net: number
+  bookings: number
+  refundedBookings: number
+}
+
+type FinanceDashboard = {
+  summary: {
+    totalRevenue: number
+    totalRefunds: number
+    netRevenue: number
+    paidBookings: number
+    refundedBookings: number
+    averageBookingValue: number
+  }
+  segments: {
+    bySchool: FinanceSegment[]
+    byRoute: FinanceSegment[]
+    byDate: FinanceSegment[]
+    byPaymentMethod: FinanceSegment[]
+  }
+}
+
+const money = (value: number) => `£${(value || 0).toFixed(2)}`
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null)
@@ -22,11 +52,13 @@ export default function AnalyticsPage() {
       fetch("/api/admin/drivers").then(r => r.json()),
       fetch("/api/admin/vehicles").then(r => r.json()),
       fetch("/api/admin/bookings").then(r => r.json()),
-    ]).then(([dash, schedules, drivers, vehicles, bookings]) => {
+      fetch("/api/admin/finance-dashboard").then(r => r.json()),
+    ]).then(([dash, schedules, drivers, vehicles, bookings, finance]) => {
       const schedArr = Array.isArray(schedules) ? schedules : []
       const driversArr = Array.isArray(drivers) ? drivers : []
       const vehiclesArr = Array.isArray(vehicles) ? vehicles : []
       const bookingsArr = Array.isArray(bookings) ? bookings : []
+      const financeData: FinanceDashboard | null = finance?.summary ? finance : null
 
       // Route utilisation
       const routeUtilData = schedArr.slice(0, 8).map((s: any) => ({
@@ -56,11 +88,11 @@ export default function AnalyticsPage() {
       }, {})
       const bookingStatusData = Object.entries(bookingsByStatus).map(([name, value]) => ({ name, value }))
 
-      // Revenue calculations
-      const totalRevenue = bookingsArr
+      // Revenue calculations retained as local fallback if the finance endpoint is unavailable.
+      const totalRevenue = financeData?.summary.totalRevenue ?? bookingsArr
         .filter((b: any) => b.status === 'CONFIRMED')
         .reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0)
-      const totalRefunded = bookingsArr
+      const totalRefunded = financeData?.summary.totalRefunds ?? bookingsArr
         .filter((b: any) => b.status === 'REFUNDED')
         .reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0)
       const pendingRevenue = bookingsArr
@@ -107,7 +139,7 @@ export default function AnalyticsPage() {
         dash, routeUtilData, vehicleTypeData, driverStatusData,
         schedArr, driversArr, vehiclesArr, bookingsArr,
         bookingStatusData, totalRevenue, totalRefunded, pendingRevenue,
-        revenueByMonth, routeBookingData
+        revenueByMonth, routeBookingData, finance: financeData
       })
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -118,6 +150,8 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
     </DashboardLayout>
   )
+
+  const finance: FinanceDashboard | null = data?.finance ?? null
 
   return (
     <DashboardLayout title="Analytics">
@@ -145,107 +179,182 @@ export default function AnalyticsPage() {
         {/* Revenue KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Confirmed Revenue", value: `£${(data?.totalRevenue || 0).toFixed(2)}`, icon: PoundSterling, bg: "bg-green-50", color: "text-green-700" },
-            { label: "Total Bookings", value: data?.bookingsArr?.length || 0, icon: CreditCard, bg: "bg-blue-50", color: "text-blue-700" },
-            { label: "Refunded", value: `£${(data?.totalRefunded || 0).toFixed(2)}`, icon: TrendingUp, bg: "bg-red-50", color: "text-red-700" },
-            {
-              label: "Conversion Rate",
-              value: data?.bookingsArr?.length
-                ? `${Math.round((data.bookingsArr.filter((b: any) => b.status === 'CONFIRMED').length / data.bookingsArr.length) * 100)}%`
-                : '0%',
-              icon: Percent,
-              bg: "bg-purple-50",
-              color: "text-purple-700"
-            },
+            { label: "Gross Revenue", value: money(finance?.summary.totalRevenue ?? data?.totalRevenue ?? 0), icon: PoundSterling, color: "text-green-600" },
+            { label: "Refunds", value: money(finance?.summary.totalRefunds ?? data?.totalRefunded ?? 0), icon: RotateCcw, color: "text-red-600" },
+            { label: "Net Revenue", value: money(finance?.summary.netRevenue ?? ((data?.totalRevenue || 0) - (data?.totalRefunded || 0))), icon: TrendingUp, color: "text-blue-600" },
+            { label: "Avg Booking Value", value: money(finance?.summary.averageBookingValue ?? 0), icon: CreditCard, color: "text-purple-600" },
           ].map((s, i) => (
-            <Card key={i} className={s.bg}>
+            <Card key={i}>
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
-                  <p className={`text-xs font-medium uppercase tracking-wide ${s.color} opacity-70`}>{s.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">{s.label}</p>
+                  <p className="text-3xl font-bold mt-1">{s.value}</p>
                 </div>
-                <s.icon className={`h-7 w-7 ${s.color} opacity-30`} />
+                <s.icon className={`h-8 w-8 ${s.color} opacity-40`} />
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Revenue by Month */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PoundSterling className="h-5 w-5" />Monthly Revenue (Last 6 Months)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.revenueByMonth?.some((m: any) => m.revenue > 0) ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={data.revenueByMonth} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                  <defs>
-                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#000" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#000" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `£${v}`} />
-                  <Tooltip formatter={(v: unknown) => [`£${Number(v).toFixed(2)}`, 'Revenue']} />
-                  <Legend />
-                  <Area type="monotone" dataKey="revenue" stroke="#000" strokeWidth={2} fill="url(#revenueGrad)" name="Revenue (£)" />
-                  <Bar dataKey="bookings" fill="#ccc" name="Bookings" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-                <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p>No booking revenue data yet</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Finance segmentation dashboard */}
+        {finance && (
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><PoundSterling className="h-5 w-5" />Revenue and refunds by school</CardTitle></CardHeader>
+              <CardContent>
+                {finance.segments.bySchool.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={finance.segments.bySchool.slice(0, 10)} margin={{ top: 5, right: 10, bottom: 70, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 10 }} angle={-35} textAnchor="end" />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(value) => money(Number(value ?? 0))} />
+                      <Legend />
+                      <Bar dataKey="revenue" fill="#111827" name="Revenue" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="refunds" fill="#ef4444" name="Refunds" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : <p className="text-gray-500 text-center py-8">No school finance data available</p>}
+              </CardContent>
+            </Card>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Booking Status Distribution */}
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Route className="h-5 w-5" />Revenue and refunds by route</CardTitle></CardHeader>
+              <CardContent>
+                {finance.segments.byRoute.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={finance.segments.byRoute.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 20, bottom: 5, left: 120 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={120} />
+                      <Tooltip formatter={(value) => money(Number(value ?? 0))} />
+                      <Legend />
+                      <Bar dataKey="revenue" fill="#111827" name="Revenue" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="refunds" fill="#ef4444" name="Refunds" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : <p className="text-gray-500 text-center py-8">No route finance data available</p>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" />Daily net revenue</CardTitle></CardHeader>
+              <CardContent>
+                {finance.segments.byDate.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={finance.segments.byDate} margin={{ top: 5, right: 20, bottom: 35, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(value) => money(Number(value ?? 0))} />
+                      <Legend />
+                      <Line type="monotone" dataKey="revenue" stroke="#111827" strokeWidth={2} name="Revenue" dot={false} />
+                      <Line type="monotone" dataKey="refunds" stroke="#ef4444" strokeWidth={2} name="Refunds" dot={false} />
+                      <Line type="monotone" dataKey="net" stroke="#2563eb" strokeWidth={2} name="Net" dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : <p className="text-gray-500 text-center py-8">No daily finance data available</p>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Payment method segmentation</CardTitle></CardHeader>
+              <CardContent>
+                {finance.segments.byPaymentMethod.length > 0 ? (
+                  <div className="space-y-3">
+                    {finance.segments.byPaymentMethod.map(row => (
+                      <div key={row.key} className="rounded-lg border border-gray-100 p-4 dark:border-gray-800">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold">{row.label}</p>
+                            <p className="text-xs text-gray-500">{row.bookings} paid bookings · {row.refundedBookings} refunded</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">{money(row.net)}</p>
+                            <p className="text-xs text-gray-500">net</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded bg-gray-50 p-2 dark:bg-gray-900"><span className="text-gray-500">Revenue</span><p className="font-semibold">{money(row.revenue)}</p></div>
+                          <div className="rounded bg-red-50 p-2 text-red-800 dark:bg-red-950"><span className="text-red-600">Refunds</span><p className="font-semibold">{money(row.refunds)}</p></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-gray-500 text-center py-8">No payment method data available</p>}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Booking Status & Revenue */}
+        <div className="grid lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader><CardTitle>Booking Status Distribution</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" />Booking Status</CardTitle></CardHeader>
             <CardContent>
               {data?.bookingStatusData?.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
-                    <Pie data={data.bookingStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
+                    <Pie data={data.bookingStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85}
                       label={({ name, value }) => `${name}: ${value}`}>
                       {data.bookingStatusData.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : (
-                <div className="text-center py-8 text-gray-400 dark:text-gray-500">No booking data</div>
-              )}
+              ) : <p className="text-gray-500 text-center py-8">No booking data</p>}
             </CardContent>
           </Card>
 
-          {/* Vehicle Type Pie */}
           <Card>
-            <CardHeader><CardTitle>Fleet by Vehicle Type</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><PoundSterling className="h-5 w-5" />Revenue Overview</CardTitle></CardHeader>
             <CardContent>
-              {data?.vehicleTypeData?.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={data.vehicleTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
-                      label={({ name, value }) => `${name}: ${value}`}>
-                      {data.vehicleTypeData.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : <p className="text-gray-500 dark:text-gray-400 text-center py-8">No vehicle data</p>}
+              <div className="space-y-4">
+                {[
+                  { label: "Gross Revenue", value: data?.totalRevenue || 0, color: "bg-green-500" },
+                  { label: "Refunded", value: data?.totalRefunded || 0, color: "bg-red-500" },
+                  { label: "Pending", value: data?.pendingRevenue || 0, color: "bg-yellow-500" },
+                ].map((item, i) => (
+                  <div key={i}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>{item.label}</span><span className="font-semibold">{money(item.value)}</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`${item.color} h-full`} style={{ width: `${Math.min((item.value / Math.max(data?.totalRevenue || 1, 1)) * 100, 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Net Revenue</span>
+                    <span className="text-2xl font-bold">{money((data?.totalRevenue || 0) - (data?.totalRefunded || 0))}</span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Route Utilisation Chart */}
+        {/* Revenue Trend */}
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />Revenue Trend (Last 6 Months)</CardTitle></CardHeader>
+          <CardContent>
+            {data?.revenueByMonth?.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={data.revenueByMonth} margin={{ top: 5, right: 30, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value, name) => name === 'revenue' ? money(Number(value ?? 0)) : value} />
+                  <Legend />
+                  <Area type="monotone" dataKey="revenue" stroke="#000" fill="#000" fillOpacity={0.15} name="Revenue (£)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : <p className="text-gray-500 text-center py-8">No revenue data available</p>}
+          </CardContent>
+        </Card>
+
+        {/* Route Utilisation */}
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" />Route Utilisation (Assigned vs Capacity)</CardTitle></CardHeader>
           <CardContent>
@@ -313,7 +422,7 @@ export default function AnalyticsPage() {
                   { label: "Active Routes", value: data?.schedArr?.filter((s: any) => ['ACTIVE', 'SCHEDULED'].includes(s.status))?.length || 0 },
                   { label: "Total Bookings", value: data?.bookingsArr?.length || 0 },
                   { label: "Confirmed Bookings", value: data?.bookingsArr?.filter((b: any) => b.status === 'CONFIRMED')?.length || 0 },
-                  { label: "Net Revenue", value: `£${((data?.totalRevenue || 0) - (data?.totalRefunded || 0)).toFixed(2)}` },
+                  { label: "Net Revenue", value: money(finance?.summary.netRevenue ?? ((data?.totalRevenue || 0) - (data?.totalRefunded || 0))) },
                 ].map((row, i) => (
                   <div key={i} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
                     <span className="text-sm text-gray-600 dark:text-gray-400">{row.label}</span>
