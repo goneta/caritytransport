@@ -32,9 +32,22 @@ interface RecipientInfo {
   name: string | null
   email: string
   phone: string | null
+  role: string
   notifySMS: boolean
   notifyEmail: boolean
   notifyPush: boolean
+}
+
+function notificationUrlForRole(role: string): string {
+  switch (role) {
+    case 'ADMIN':
+      return '/admin/notifications'
+    case 'DRIVER':
+      return '/driver/notifications'
+    case 'PARENT':
+    default:
+      return '/parent/notifications'
+  }
 }
 
 // ─── Configuration Check ───
@@ -181,6 +194,7 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
       name: true,
       email: true,
       phone: true,
+      role: true,
       notifySMS: true,
       notifyEmail: true,
       notifyPush: true,
@@ -232,7 +246,7 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     await sendPushToUser(recipient.id, {
       title: subject || `Carity: ${type.replace(/_/g, ' ')}`,
       body: message,
-      url: '/parent/notifications',
+      url: notificationUrlForRole(recipient.role),
       tag: triggerEvent || type,
     })
   }
@@ -282,6 +296,7 @@ async function dispatchExternalOnly(payload: NotificationPayload): Promise<void>
       name: true,
       email: true,
       phone: true,
+      role: true,
       notifySMS: true,
       notifyEmail: true,
       notifyPush: true,
@@ -323,7 +338,7 @@ async function dispatchExternalOnly(payload: NotificationPayload): Promise<void>
     await sendPushToUser(recipient.id, {
       title: subject || `Carity: ${type.replace(/_/g, ' ')}`,
       body: message,
-      url: '/parent/notifications',
+      url: notificationUrlForRole(recipient.role),
       tag: triggerEvent || type,
     })
   }
