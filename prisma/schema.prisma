@@ -158,6 +158,8 @@ model Vehicle {
 
   schedules     TransportSchedule[]
   tripLogs      TripLog[]
+  preTripChecklists PreTripChecklist[]
+  emergencyEscalations EmergencyEscalation[]
 }
 
 model Driver {
@@ -178,6 +180,8 @@ model Driver {
 
   schedules       TransportSchedule[]
   tripLogs        TripLog[]
+  preTripChecklists PreTripChecklist[]
+  emergencyEscalations EmergencyEscalation[]
   unavailability  DriverUnavailability[]
 }
 
@@ -223,6 +227,8 @@ model TransportSchedule {
 
   seatAssignments SeatAssignment[]
   tripLogs        TripLog[]
+  preTripChecklists PreTripChecklist[]
+  emergencyEscalations EmergencyEscalation[]
   bookingItems    BookingItem[]
   recurringTransportPlans RecurringTransportPlan[]
   currentRouteChangeRequests RouteChangeRequest[] @relation("CurrentRouteChangeSchedule")
@@ -266,6 +272,54 @@ model TripLog {
   latitude    Float?
   longitude   Float?
   qrScanned   Boolean   @default(false)
+}
+
+model PreTripChecklist {
+  id                 String    @id @default(cuid())
+  driverId           String
+  driver             Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  scheduleId         String
+  schedule           TransportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  vehicleId          String?
+  vehicle            Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  checklistItems     Json
+  passengerCount     Int
+  endOfTripCompleted Boolean   @default(false)
+  status             String    @default("COMPLETED")
+  completedAt        DateTime?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([driverId])
+  @@index([scheduleId])
+  @@index([vehicleId])
+  @@index([createdAt])
+}
+
+model EmergencyEscalation {
+  id             String    @id @default(cuid())
+  driverId       String
+  driver         Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  scheduleId     String
+  schedule       TransportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  vehicleId      String?
+  vehicle        Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  latitude       Float?
+  longitude      Float?
+  passengerCount Int
+  routeContext   Json
+  status         String    @default("ACTIVE")
+  resolvedAt     DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([driverId])
+  @@index([scheduleId])
+  @@index([vehicleId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Booking {

@@ -18,7 +18,9 @@ import {
   Trash2,
   LayoutList,
   CalendarDays,
-  Navigation
+  Navigation,
+  ShieldCheck,
+  Siren
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -71,6 +73,21 @@ export default function DriverSchedulePage() {
   const [saving, setSaving] = useState(false)
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const [publishingTracking, setPublishingTracking] = useState<string | null>(null)
+  const [showChecklistDialog, setShowChecklistDialog] = useState(false)
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
+  const [submittingChecklist, setSubmittingChecklist] = useState(false)
+  const [emergencySubmitting, setEmergencySubmitting] = useState<string | null>(null)
+  const [checklistItems, setChecklistItems] = useState({
+    fuel: true,
+    tyres: true,
+    lights: true,
+    mirrors: true,
+    firstAid: true,
+    passengerManifest: true,
+    endOfTripCompletion: false,
+  })
+  const [checklistPassengerCount, setChecklistPassengerCount] = useState('')
+  const [checklistNotes, setChecklistNotes] = useState('')
 
   useEffect(() => { fetchData() }, [])
 
@@ -169,6 +186,115 @@ export default function DriverSchedulePage() {
       }
     } finally {
       setPublishingTracking(null)
+    }
+  }
+
+  function openChecklist(schedule: Schedule) {
+    setSelectedSchedule(schedule)
+    setChecklistPassengerCount(String(schedule._count.seatAssignments))
+    setChecklistItems({
+      fuel: true,
+      tyres: true,
+      lights: true,
+      mirrors: true,
+      firstAid: true,
+      passengerManifest: true,
+      endOfTripCompletion: false,
+    })
+    setChecklistNotes('')
+    setShowChecklistDialog(true)
+  }
+
+  function toggleChecklistItem(key: keyof typeof checklistItems) {
+    setChecklistItems(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  async function submitPreTripChecklist() {
+    if (!selectedSchedule) return
+    setSubmittingChecklist(true)
+    try {
+      const res = await fetch('/api/driver/pre-trip-checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduleId: selectedSchedule.id,
+          checklistItems,
+          passengerCount: Number(checklistPassengerCount),
+          endOfTripCompleted: checklistItems.endOfTripCompletion,
+          notes: checklistNotes,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit pre-trip checklist')
+      setShowChecklistDialog(false)
+      setSelectedSchedule(null)
+      await fetchData()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to submit pre-trip checklist')
+    } finally {
+      setSubmittingChecklist(false)
+    }
+  }
+
+  async function raiseEmergency(schedule: Schedule) {
+    if (!confirm(`Raise an emergency escalation for ${schedule.routeName}? This will immediately notify all administrators with GPS, vehicle, route and passenger context.`)) return
+    setEmergencySubmitting(schedule.id)
+
+    const sendEscalation = async (coords?: GeolocationCoordinates) => {
+      const res = await fetch('/api/driver/emergency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduleId: schedule.id,
+          latitude: coords?.latitude,
+          longitude: coords?.longitude,
+          passengerCount: schedule._count.seatAssignments,
+          routeContext: {
+            routeName: schedule.routeName,
+            direction: schedule.direction,
+            school: schedule.school?.name || null,
+            vehicle: schedule.vehicle?.regPlate || null,
+            visiblePassengers: schedule.seatAssignments.map(sa => sa.pupil.fullName),
+          },
+          notes: coords ? 'Driver emergency escalation with browser GPS coordinates' : 'Driver emergency escalation without browser GPS coordinates',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to raise emergency escalation')
+      alert(`Emergency escalation raised. ${data.notifiedAdmins || 0} administrators notified.`)
+      await fetchData()
+    }
+
+    try {
+      if ('geolocation' in navigator) {
+        await new Promise<void>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              try {
+                await sendEscalation(position.coords)
+              } catch (error) {
+                alert(error instanceof Error ? error.message : 'Failed to raise emergency escalation')
+              } finally {
+                resolve()
+              }
+            },
+            async () => {
+              try {
+                await sendEscalation()
+              } catch (error) {
+                alert(error instanceof Error ? error.message : 'Failed to raise emergency escalation')
+              } finally {
+                resolve()
+              }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+          )
+        })
+      } else {
+        await sendEscalation()
+      }
+    } finally {
+      setEmergencySubmitting(null)
     }
   }
 
@@ -326,8 +452,24 @@ export default function DriverSchedulePage() {
                       {unavail && <span className="text-xs text-orange-600">🚫 Off</span>}
                     </div>
                     {daySchedules.map(s => (
-                      <div key={s.id} className="text-xs bg-blue-100 text-blue-800 rounded p-1 mb-1 truncate">
-                        {s.departureTime} {s.routeName}
+                      <div key={s.id} className="text-xs bg-blue-100 text-blue-800 rounded p-1 mb-1">
+                        <div className="truncate">{s.departureTime} {s.routeName}</div>
+                        <div className="mt-1 flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openChecklist(s)}
+                            className="rounded bg-white px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                          >
+                            Check
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => raiseEmergency(s)}
+                            className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white"
+                          >
+                            SOS
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -389,8 +531,27 @@ export default function DriverSchedulePage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openChecklist(schedule)}
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                          disabled={submittingChecklist || emergencySubmitting !== null}
+                        >
+                          <ShieldCheck className="w-3 h-3 mr-1" />
+                          Pre-Trip Check
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => raiseEmergency(schedule)}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                          disabled={emergencySubmitting !== null || publishingTracking !== null}
+                        >
+                          <Siren className="w-3 h-3 mr-1" />
+                          {emergencySubmitting === schedule.id ? 'Escalating...' : 'Emergency'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => publishTracking(schedule.id, 'DEPARTED_DEPOT')}
-                          disabled={publishingTracking !== null}
+                          disabled={publishingTracking !== null || emergencySubmitting !== null}
                         >
                           <Navigation className="w-3 h-3 mr-1" />
                           {publishingTracking === `${schedule.id}:DEPARTED_DEPOT` ? 'Publishing...' : 'Departed'}
@@ -399,7 +560,7 @@ export default function DriverSchedulePage() {
                           size="sm"
                           variant="outline"
                           onClick={() => publishTracking(schedule.id, 'EN_ROUTE')}
-                          disabled={publishingTracking !== null}
+                          disabled={publishingTracking !== null || emergencySubmitting !== null}
                         >
                           <MapPin className="w-3 h-3 mr-1" />
                           {publishingTracking === `${schedule.id}:EN_ROUTE` ? 'Publishing...' : 'En route'}
@@ -408,7 +569,7 @@ export default function DriverSchedulePage() {
                           size="sm"
                           variant="outline"
                           onClick={() => publishTracking(schedule.id, 'ARRIVED_PICKUP')}
-                          disabled={publishingTracking !== null}
+                          disabled={publishingTracking !== null || emergencySubmitting !== null}
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
                           {publishingTracking === `${schedule.id}:ARRIVED_PICKUP` ? 'Publishing...' : 'At pickup'}
@@ -417,7 +578,7 @@ export default function DriverSchedulePage() {
                           size="sm"
                           variant="outline"
                           onClick={() => publishTracking(schedule.id, 'ARRIVED_SCHOOL')}
-                          disabled={publishingTracking !== null}
+                          disabled={publishingTracking !== null || emergencySubmitting !== null}
                         >
                           <Bus className="w-3 h-3 mr-1" />
                           {publishingTracking === `${schedule.id}:ARRIVED_SCHOOL` ? 'Publishing...' : 'At school'}
@@ -426,7 +587,7 @@ export default function DriverSchedulePage() {
                           size="sm"
                           variant="outline"
                           onClick={() => publishTracking(schedule.id, 'COMPLETED')}
-                          disabled={publishingTracking !== null}
+                          disabled={publishingTracking !== null || emergencySubmitting !== null}
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
                           {publishingTracking === `${schedule.id}:COMPLETED` ? 'Publishing...' : 'Complete'}
@@ -578,6 +739,94 @@ export default function DriverSchedulePage() {
                 className="bg-orange-500 hover:bg-orange-600"
               >
                 {saving ? 'Submitting...' : 'Submit Unavailability'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pre-Trip Checklist Dialog */}
+      <Dialog open={showChecklistDialog} onOpenChange={setShowChecklistDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              Pre-Trip Safety Checklist
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {selectedSchedule && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+                <p className="font-medium text-slate-900 dark:text-white">{selectedSchedule.routeName}</p>
+                <p className="text-slate-600 dark:text-slate-400">
+                  {selectedSchedule.direction.replace(/_/g, ' ')} · {selectedSchedule.departureTime} · Vehicle {selectedSchedule.vehicle?.regPlate || 'not assigned'}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                ['fuel', 'Fuel level checked'],
+                ['tyres', 'Tyres and wheels checked'],
+                ['lights', 'Lights and indicators checked'],
+                ['mirrors', 'Mirrors and visibility checked'],
+                ['firstAid', 'First aid and safety kit checked'],
+                ['passengerManifest', 'Passenger manifest reviewed'],
+                ['endOfTripCompletion', 'End-of-trip completion procedure confirmed'],
+              ].map(([key, label]) => (
+                <label key={key} className="flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <input
+                    type="checkbox"
+                    checked={checklistItems[key as keyof typeof checklistItems]}
+                    onChange={() => toggleChecklistItem(key as keyof typeof checklistItems)}
+                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Passenger count on board</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={checklistPassengerCount}
+                  onChange={e => setChecklistPassengerCount(e.target.value)}
+                />
+                {selectedSchedule && (
+                  <p className="mt-1 text-xs text-slate-500">Manifest count: {selectedSchedule._count.seatAssignments}</p>
+                )}
+              </div>
+              <div>
+                <Label>Vehicle registration</Label>
+                <Input value={selectedSchedule?.vehicle?.regPlate || 'Not assigned'} disabled />
+              </div>
+            </div>
+
+            <div>
+              <Label>Notes or defects</Label>
+              <textarea
+                className="w-full border rounded-lg p-2 text-sm min-h-24 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Record any vehicle defects, passenger-count differences, or handover notes..."
+                value={checklistNotes}
+                onChange={e => setChecklistNotes(e.target.value)}
+              />
+            </div>
+
+            <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg dark:bg-slate-900 dark:text-slate-300">
+              Submissions are saved to the route record. Any missing vehicle checks or passenger-count mismatch will alert administrators for follow-up.
+            </p>
+
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setShowChecklistDialog(false)}>Cancel</Button>
+              <Button
+                onClick={submitPreTripChecklist}
+                disabled={submittingChecklist || !selectedSchedule || checklistPassengerCount === ''}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {submittingChecklist ? 'Saving...' : 'Submit Checklist'}
               </Button>
             </div>
           </div>
