@@ -47,6 +47,7 @@ model User {
   sentDirectMessages DirectMessage[] @relation("DirectMessageSender")
   moderatedDirectMessages DirectMessage[] @relation("DirectMessageModerator")
   chatModerationLogs ChatModerationLog[] @relation("ChatModerationActor")
+  createdIncidentReports IncidentReport[] @relation("IncidentReportCreatedBy")
 }
 
 model Session {
@@ -117,6 +118,7 @@ model Pupil {
   bookingItems        BookingItem[]
   recurringTransportPlans RecurringTransportPlan[]
   routeChangeRequests RouteChangeRequest[]
+  incidentReports IncidentReport[]
 }
 
 // Pupil login account (separate from parent)
@@ -163,6 +165,7 @@ model Vehicle {
 
   schedules     TransportSchedule[]
   tripLogs      TripLog[]
+  incidentReports IncidentReport[]
   preTripChecklists PreTripChecklist[]
   emergencyEscalations EmergencyEscalation[]
 }
@@ -185,6 +188,7 @@ model Driver {
 
   schedules       TransportSchedule[]
   tripLogs        TripLog[]
+  incidentReports IncidentReport[]
   preTripChecklists PreTripChecklist[]
   emergencyEscalations EmergencyEscalation[]
   unavailability  DriverUnavailability[]
@@ -239,6 +243,7 @@ model TransportSchedule {
   currentRouteChangeRequests RouteChangeRequest[] @relation("CurrentRouteChangeSchedule")
   requestedRouteChangeRequests RouteChangeRequest[] @relation("RequestedRouteChangeSchedule")
   chatThreads     ChatThread[]
+  incidentReports IncidentReport[]
 }
 
 model SeatAssignment {
@@ -278,6 +283,7 @@ model TripLog {
   latitude    Float?
   longitude   Float?
   qrScanned   Boolean   @default(false)
+  incidentReports IncidentReport[]
 }
 
 model PreTripChecklist {
@@ -574,6 +580,60 @@ model AuditLog {
   ipAddress   String?
   userAgent   String?
   timestamp   DateTime  @default(now())
+}
+
+
+model IncidentReport {
+  id                String    @id @default(cuid())
+  reference         String    @unique
+  incidentType      String    // DELAY, VEHICLE_ISSUE, BEHAVIOURAL_INCIDENT, PUPIL_LEFT_BEHIND, SAFEGUARDING, MEDICAL, OTHER
+  severity          String    @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  status            String    @default("OPEN") // OPEN, INVESTIGATING, RESOLVED, CLOSED
+  title             String
+  description       String
+  actionTaken       String?
+  parentVisible     Boolean   @default(true)
+  parentNotified    Boolean   @default(false)
+  parentNotificationSummary String?
+  tripLogId         String?
+  tripLog           TripLog?  @relation(fields: [tripLogId], references: [id], onDelete: SetNull)
+  scheduleId        String?
+  schedule          TransportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  pupilId           String?
+  pupil             Pupil?    @relation(fields: [pupilId], references: [id], onDelete: SetNull)
+  driverId          String?
+  driver            Driver?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicleId         String?
+  vehicle           Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  createdById       String
+  createdBy         User      @relation("IncidentReportCreatedBy", fields: [createdById], references: [id])
+  resolvedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  attachments       IncidentAttachment[]
+
+  @@index([incidentType, createdAt])
+  @@index([severity, status])
+  @@index([status, createdAt])
+  @@index([scheduleId, createdAt])
+  @@index([pupilId, createdAt])
+  @@index([driverId, createdAt])
+  @@index([tripLogId])
+}
+
+model IncidentAttachment {
+  id          String    @id @default(cuid())
+  incidentId  String
+  incident    IncidentReport @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileType    String
+  fileUrl     String
+  caption     String?
+  uploadedById String?
+  createdAt   DateTime  @default(now())
+
+  @@index([incidentId, createdAt])
 }
 
 model NotificationTemplate {
