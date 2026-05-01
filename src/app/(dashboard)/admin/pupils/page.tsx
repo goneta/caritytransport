@@ -33,6 +33,7 @@ export default function PupilsPage() {
   const [editForm, setEditForm] = useState<any>({})
   const [showDelete, setShowDelete] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const selectableParents = parents.filter((par: any) => Boolean(par.parent?.id))
 
   const fetchAll = () => {
     setLoading(true)
@@ -221,7 +222,11 @@ export default function PupilsPage() {
                 <Select value={form.parentId} onValueChange={v => setForm(p => ({ ...p, parentId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select parent" /></SelectTrigger>
                   <SelectContent>
-                    {parents.map((par: any) => <SelectItem key={par.parent?.id} value={par.parent?.id || ''}>{par.name} ({par.email})</SelectItem>)}
+                    {selectableParents.length === 0 ? (
+                      <SelectItem value="__no_parents__" disabled>No parent profiles available</SelectItem>
+                    ) : selectableParents.map((par: any) => (
+                      <SelectItem key={par.parent.id} value={par.parent.id}>{par.name} ({par.email})</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
