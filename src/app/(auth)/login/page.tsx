@@ -128,13 +128,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">Demo accounts:</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Admin: admin@carity.com</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Parent: parent@carity.com</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Driver: james.driver@carity.com</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Password: password123</p>
-          </div>
         </div>
 
         <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">

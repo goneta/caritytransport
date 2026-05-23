@@ -21,40 +21,46 @@ interface NavItem {
   children?: NavItem[]
 }
 
+interface SessionUser {
+  role?: string
+  image?: string | null
+  name?: string | null
+}
+
 const adminNavItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   {
-    href: "/admin/people", label: "People", icon: Users, children: [
+    href: "/admin/people", label: "People", icon: Users, roles: ["SUPER_ADMIN"], children: [
       { href: "/admin/parents", label: "Parents", icon: Users },
       { href: "/admin/pupils", label: "Pupils", icon: GraduationCap },
       { href: "/admin/employees", label: "Employees", icon: Briefcase },
     ]
   },
   {
-    href: "/admin/fleet", label: "Fleet", icon: Bus, children: [
+    href: "/admin/fleet", label: "Fleet", icon: Bus, roles: ["SUPER_ADMIN"], children: [
       { href: "/admin/companies", label: "Companies", icon: Building2 },
       { href: "/admin/vehicles", label: "Vehicles", icon: Car },
       { href: "/admin/drivers", label: "Drivers", icon: UserCog },
       { href: "/admin/compliance", label: "Compliance", icon: ShieldCheck },
     ]
   },
-  { href: "/admin/schools", label: "Schools", icon: School },
+  { href: "/admin/schools", label: "Schools", icon: School, roles: ["SUPER_ADMIN"] },
   {
-    href: "/admin/scheduling", label: "Scheduling", icon: Route, children: [
+    href: "/admin/scheduling", label: "Scheduling", icon: Route, roles: ["SUPER_ADMIN"], children: [
       { href: "/admin/schedules", label: "Routes", icon: Route },
       { href: "/admin/holidays", label: "Holidays", icon: CalendarDays },
     ]
   },
-  { href: "/admin/bookings", label: "Bookings", icon: CreditCard },
-  { href: "/admin/unavailability", label: "Driver Unavailability", icon: AlertTriangle },
-  { href: "/admin/incidents", label: "Incidents", icon: ShieldCheck },
+  { href: "/admin/bookings", label: "Bookings", icon: CreditCard, roles: ["SUPER_ADMIN"] },
+  { href: "/admin/unavailability", label: "Driver Unavailability", icon: AlertTriangle, roles: ["SUPER_ADMIN"] },
+  { href: "/admin/incidents", label: "Incidents", icon: ShieldCheck, roles: ["SUPER_ADMIN"] },
   { href: "/admin/resolution", label: "Resolution Centre", icon: Headphones },
-  { href: "/admin/chat", label: "Moderated Chat", icon: MessageSquare },
+  { href: "/admin/chat", label: "Moderated Chat", icon: MessageSquare, roles: ["SUPER_ADMIN"] },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/documents", label: "Documents", icon: FileText },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3, roles: ["SUPER_ADMIN"] },
+  { href: "/admin/documents", label: "Documents", icon: FileText, roles: ["SUPER_ADMIN"] },
   { href: "/admin/careers", label: "Careers", icon: Briefcase },
-  { href: "/admin/audit", label: "Audit Log", icon: ShieldCheck },
+  { href: "/admin/audit", label: "Audit Log", icon: ShieldCheck, roles: ["SUPER_ADMIN"] },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ]
 
@@ -99,7 +105,8 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
-  const role = (session?.user as any)?.role || ''
+  const user = session?.user as SessionUser | undefined
+  const role = user?.role || ''
   let navItems = parentNavItems
   if (['SUPER_ADMIN', 'ADMIN', 'SCHEDULER', 'OPERATIONS'].includes(role)) {
     navItems = adminNavItems
@@ -108,6 +115,16 @@ export default function Sidebar() {
   } else if (role === 'PUPIL') {
     navItems = pupilNavItems
   }
+
+  const filterNavItems = (items: NavItem[]): NavItem[] =>
+    items
+      .filter(item => !item.roles || item.roles.includes(role))
+      .map(item => ({
+        ...item,
+        children: item.children ? filterNavItems(item.children) : undefined,
+      }))
+
+  navItems = filterNavItems(navItems)
 
   const toggleExpanded = (href: string) => {
     setExpandedItems(prev =>
@@ -197,9 +214,9 @@ export default function Sidebar() {
         <div className="flex items-center gap-3 mb-3">
           {/* Avatar */}
           <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 flex-shrink-0 bg-slate-800 flex items-center justify-center">
-            {(session?.user as any)?.image ? (
+            {user?.image ? (
               <img
-                src={(session?.user as any).image}
+                src={user.image}
                 alt={session?.user?.name ?? 'Avatar'}
                 className="w-full h-full object-cover"
               />

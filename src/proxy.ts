@@ -2,6 +2,33 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
+const superAdminOnlyAdminPaths = [
+  '/admin/people',
+  '/admin/parents',
+  '/admin/pupils',
+  '/admin/employees',
+  '/admin/fleet',
+  '/admin/companies',
+  '/admin/vehicles',
+  '/admin/drivers',
+  '/admin/compliance',
+  '/admin/schools',
+  '/admin/scheduling',
+  '/admin/schedules',
+  '/admin/holidays',
+  '/admin/bookings',
+  '/admin/unavailability',
+  '/admin/incidents',
+  '/admin/chat',
+  '/admin/analytics',
+  '/admin/documents',
+  '/admin/audit',
+]
+
+function matchesPath(pathname: string, protectedPath: string) {
+  return pathname === protectedPath || pathname.startsWith(`${protectedPath}/`)
+}
+
 export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
   const { pathname } = request.nextUrl
@@ -32,6 +59,13 @@ export async function proxy(request: NextRequest) {
     const role = token.role as string
     if (!['SUPER_ADMIN', 'ADMIN', 'SCHEDULER', 'OPERATIONS'].includes(role)) {
       return NextResponse.redirect(new URL('/parent', request.url))
+    }
+
+    if (
+      role !== 'SUPER_ADMIN' &&
+      superAdminOnlyAdminPaths.some(protectedPath => matchesPath(pathname, protectedPath))
+    ) {
+      return NextResponse.redirect(new URL('/admin', request.url))
     }
   }
 
