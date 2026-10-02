@@ -111,10 +111,10 @@ export default function LandingPage() {
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/5 shadow-2xl">
             <Image
-              src="/student-transport-school-dropoff.jpg"
-              alt="Students boarding a school bus outside school"
-              width={1168}
-              height={784}
+              src="/student-transport-hero-school-bus.jpg"
+              alt="Students showing their school bus pass to the driver while boarding the bus"
+              width={1532}
+              height={1027}
               priority
               className="h-[360px] md:h-[520px] w-full object-cover"
             />
@@ -190,11 +190,11 @@ export default function LandingPage() {
             </div>
             <div className="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
               <Image
-                src="/student-transport-safety-features.png"
-                alt="School bus safety illustration with supervision and safety signs"
-                width={1404}
-                height={1125}
-                className="h-[320px] md:h-[520px] w-full object-contain bg-white"
+                src="/student-transport-bus-pickup.jpg"
+                alt="Students getting off the school bus outside their homes"
+                width={1531}
+                height={1027}
+                className="h-[320px] md:h-[520px] w-full object-cover"
               />
             </div>
           </div>
@@ -207,10 +207,10 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-[1.02fr_0.98fr] gap-12 items-center">
             <div className="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-900">
               <Image
-                src="/student-transport-school-dropoff.jpg"
-                alt="School bus waiting at the school for planned student drop-off"
-                width={1168}
-                height={784}
+                src="/student-transport-bus-school-arrival.jpg"
+                alt="Students boarding the school bus at the school for planned drop-off"
+                width={1531}
+                height={1027}
                 className="h-[320px] md:h-[500px] w-full object-cover"
               />
             </div>
